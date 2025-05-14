@@ -298,8 +298,6 @@ impl<
                                 .max(node_new_children[sectant] as usize + 1),
                             NodeChildren::default(),
                         );
-                        self.node_mips
-                            .resize(self.node_mips.len().max(self.nodes.len()), BrickData::Empty);
                     }
 
                     match brick {
@@ -342,8 +340,6 @@ impl<
                                 .max(node_new_children[target_sectant] as usize + 1),
                             NodeChildren::default(),
                         );
-                        self.node_mips
-                            .resize(self.node_mips.len().max(self.nodes.len()), BrickData::Empty);
                         self.node_children[node_new_children[target_sectant] as usize] =
                             NodeChildren::OccupancyBitmap(0);
                     }
@@ -385,10 +381,6 @@ impl<
                                     .len()
                                     .max(node_new_children[sectant] as usize + 1),
                                 NodeChildren::default(),
-                            );
-                            self.node_mips.resize(
-                                self.node_mips.len().max(self.nodes.len()),
-                                BrickData::Empty,
                             );
 
                             // Set the occupancy bitmap for the new leaf child node

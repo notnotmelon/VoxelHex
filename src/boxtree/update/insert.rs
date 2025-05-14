@@ -189,10 +189,6 @@ impl<
                                     self.node_children.len().max(new_child_index as usize + 1),
                                     NodeChildren::default(),
                                 );
-                                self.node_mips.resize(
-                                    self.node_mips.len().max(self.nodes.len()),
-                                    BrickData::Empty,
-                                );
                                 *self.node_children[current_node_key]
                                     .child_mut(child_sectant as usize)
                                     .unwrap() = new_child_index;
@@ -311,8 +307,6 @@ impl<
                             self.node_children.len().max(self.nodes.len()),
                             NodeChildren::default(),
                         );
-                        self.node_mips
-                            .resize(self.node_mips.len().max(self.nodes.len()), BrickData::Empty);
                         *self.node_children[current_node_key]
                             .child_mut(target_child_sectant as usize)
                             .unwrap() = new_child_node;
@@ -407,9 +401,6 @@ impl<
                     }
                 }
             }
-
-            // update MIP maps
-            self.update_mip(node_key as usize, &node_bounds, &(position.into()));
 
             // Decide to continue or not
             if simplifyable

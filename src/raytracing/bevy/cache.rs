@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         types::{BrickData, NodeContent},
-        BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT, OOB_SECTANT,
+        BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
     raytracing::bevy::types::{
@@ -196,11 +196,6 @@ impl BoxTreeGPUDataHandler {
                 meta_array[node_index / 8] |= 0x01 << (8 + (node_index % 8));
             }
         };
-
-        // set node MIP properties
-        if let BrickData::Solid(_) | BrickData::Parted(_) = tree.node_mips[node_key] {
-            meta_array[node_index / 8] |= 0x01 << (16 + (node_index % 8));
-        }
     }
 
     //##############################################################################
@@ -301,16 +296,6 @@ impl BoxTreeGPUDataHandler {
                     tree.nodes.key_is_valid(*child_key),
                     "Expected erased child node({child_key}) to be valid"
                 );
-
-                // Erase MIP connection, Erase ownership as well
-                let child_mip = self.render_data.node_mips[child_descriptor];
-                if child_mip != empty_marker::<u32>() {
-                    self.render_data.node_mips[child_descriptor] = empty_marker();
-                    if matches!(tree.node_mips[*child_key], BrickData::Parted(_)) {
-                        self.brick_ownership
-                            .insert(child_mip as usize, BrickOwnedBy::NotOwned);
-                    }
-                }
 
                 modified_nodes.push(child_descriptor);
             }
@@ -436,15 +421,6 @@ impl BoxTreeGPUDataHandler {
             vec![empty_marker::<u32>(); BOX_NODE_CHILDREN_COUNT],
         );
 
-        // Add MIP entry
-        self.render_data.node_mips[node_element_index] = match tree.node_mips[node_key] {
-            BrickData::Solid(voxel) => 0x80000000 | voxel, // In case MIP is solid, it is pointing to the color palette
-            BrickData::Empty | BrickData::Parted(_) => {
-                //TODO: add MIP from ownership
-                empty_marker() // parted bricks need to be uploaded; empty MIPS are stored with empty_marker
-            }
-        };
-
         // Add child nodes of new child if any is available
         let parent_first_child_index = node_element_index * BOX_NODE_CHILDREN_COUNT;
         match tree.nodes.get(node_key) {
@@ -559,13 +535,7 @@ impl BoxTreeGPUDataHandler {
     where
         T: Default + Clone + Eq + Send + Sync + Hash + VoxelData + 'static,
     {
-        // In case OOB sectant, the target brick to add is the MIP for the node
-        let (brick, node_entry) = if target_sectant == OOB_SECTANT {
-            (
-                &tree.node_mips[node_key],
-                BrickOwnedBy::NodeAsMIP(node_key as u32),
-            )
-        } else {
+        let (brick, node_entry) = 
             (
                 match tree.nodes.get(node_key) {
                     NodeContent::UniformLeaf(brick) => brick,
@@ -575,8 +545,7 @@ impl BoxTreeGPUDataHandler {
                     }
                 },
                 BrickOwnedBy::NodeAsChild(node_key as u32, target_sectant),
-            )
-        };
+            );
 
         match brick {
             BrickData::Empty => (
@@ -605,23 +574,6 @@ impl BoxTreeGPUDataHandler {
                                 sectant as usize,
                                 tree,
                             )
-                        } else {
-                            (Vec::new(), Vec::new())
-                        }
-                    }
-                    BrickOwnedBy::NodeAsMIP(key) => {
-                        // erase MIP from node if present
-                        if self
-                            .node_key_vs_meta_index
-                            .get_by_left(&(key as usize))
-                            .is_some()
-                        {
-                            let robbed_meta_index = *self
-                                .node_key_vs_meta_index
-                                .get_by_left(&(key as usize))
-                                .unwrap();
-                            self.render_data.node_mips[robbed_meta_index] = empty_marker();
-                            (Vec::new(), vec![robbed_meta_index])
                         } else {
                             (Vec::new(), Vec::new())
                         }

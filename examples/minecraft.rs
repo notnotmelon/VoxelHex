@@ -6,7 +6,7 @@ use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
-    boxtree::{BoxTree, MIPMapStrategy, V3c, V3cf32},
+    boxtree::{BoxTree, V3c, V3cf32},
     raytracing::{BoxTreeGPUHost, Ray, VhxViewSet, Viewport},
 };
 
@@ -49,15 +49,21 @@ fn main() {
 
 #[cfg(feature = "bevy_wgpu")]
 fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
+    std::env::set_var("RUST_BACKTRACE", "1");
     let tree: BoxTree;
     let tree_path = "example_junk_minecraft";
     if std::path::Path::new(tree_path).exists() {
         tree = BoxTree::load(&tree_path).ok().unwrap();
     } else {
-        tree = MIPMapStrategy::default()
-            .set_enabled(true)
-            .load_vox_file(BRICK_DIMENSION, "assets/models/minecraft.vox")
-            .expect("Expected vox file to be valid");
+        println!("Loading minecraft.vox");
+        tree = match voxelhex::boxtree::BoxTree::load_vox_file(
+            "assets/models/minecraft.vox",
+            BRICK_DIMENSION,
+        ) {
+            Ok(tree_) => tree_,
+            Err(message) => panic!("Parsing model file failed with message: {message}"),
+        };
+        println!("Loaded minecraft.vox");
         tree.save(&tree_path).ok().unwrap();
     }
 

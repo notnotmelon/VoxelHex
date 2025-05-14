@@ -314,7 +314,7 @@ impl<
     /// provides the collision point of the ray with the contained voxel field
     /// Returns a reference of the contained data, collision point and normal at impact, if any
     pub fn get_by_ray(&self, ray: &Ray) -> Option<(BoxTreeEntry<T>, V3c<f32>, V3c<f32>)> {
-        self.get_by_ray_at_lod(ray, f32::MAX)
+        self.get_by_ray_at_lod(ray)
     }
 
     /// provides the collision point of the ray with the contained voxel field,
@@ -325,7 +325,6 @@ impl<
     pub fn get_by_ray_at_lod(
         &self,
         ray: &Ray,
-        viewing_distance: f32,
     ) -> Option<(BoxTreeEntry<T>, V3c<f32>, V3c<f32>)> {
         // Pre-calculated optimization variables
         let ray_scale_factors = Self::get_dda_scale_factors(ray);
@@ -346,7 +345,6 @@ impl<
                 (ray.origin, OOB_SECTANT, current_bounds)
             };
         let mut current_node_key: usize;
-        let mut mip_level = (self.boxtree_size as f32 / self.brick_dim as f32).log2();
 
         while target_sectant != OOB_SECTANT {
             current_node_key = Self::ROOT_NODE_KEY as usize;
@@ -363,26 +361,6 @@ impl<
                     self.nodes.get(current_node_key),
                     NodeContent::UniformLeaf(_)
                 );
-
-                // In case current node MIP level is smaller, than the required MIP level
-                if self.mip_map_strategy.is_enabled()
-                    && (mip_level // In case current node MIP level is smaller, than the required MIP level
-                    < ((ray.origin // based on ray current travel distance
-                        - (ray_current_point / (mip_level * 2.)).round()
-                            * (mip_level * 2.)) // aligned to nearest cube edges(based on current MIP level)
-                        .length())
-                        / viewing_distance)
-                {
-                    if let Some(hit) = self.probe_brick(
-                        ray,
-                        &mut ray_current_point,
-                        &self.node_mips[current_node_key],
-                        &current_bounds,
-                        &ray_scale_factors,
-                    ) {
-                        return Some(hit);
-                    }
-                }
 
                 // Probe bricks in leaf nodes if target not out of bounds
                 if target_sectant != OOB_SECTANT {
@@ -430,7 +408,6 @@ impl<
                     || 0 == (current_node_occupied_bits & RAY_TO_NODE_OCCUPANCY_BITMASK_LUT[target_sectant as usize][direction_lut_index])
                 {
                     // POP
-                    mip_level += 1.;
                     node_stack.pop();
                     target_bounds = current_bounds;
                     current_bounds.size *= BOX_NODE_DIMENSION as f32;
@@ -472,7 +449,6 @@ impl<
                     );
                     target_bounds = current_bounds.child_bounds_for(target_sectant);
                     node_stack.push(target_child_key);
-                    mip_level -= 1.;
                 } else {
                     // ADVANCE
                     // target child is invalid, or it does not intersect with the ray,

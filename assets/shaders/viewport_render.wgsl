@@ -486,57 +486,6 @@ fn probe_brick(
     return NO_RAY_INTERSECTION;
 }
 
-fn probe_MIP(
-    ray: ptr<function, Line>,
-    ray_current_point: ptr<function,vec3f>,
-    node_key: u32,
-    node_bounds: ptr<function, Cube>,
-    ray_scale_factors: ptr<function, vec3f>,
-    direction_lut_index: u32,
-    max_distance: f32
-) -> OctreeRayIntersection {
-    let brick_descriptor = node_mips[node_key];
-    if( // there is a valid mip present
-        0 != (node_metadata[node_key / 8] & (16 + (node_key % 8))) // node has MIP
-        && brick_descriptor != EMPTY_MARKER // which is uploaded
-    ) {
-        if(0 != (brick_descriptor & 0x80000000)) { // MIP brick is solid
-            // Whole brick is solid, ray hits it at first connection
-            return OctreeRayIntersection(
-                true,
-                color_palette[brick_descriptor & 0x0000FFFF], // Ray color is stored inside color_palette, it's not a brick index in this case
-                *ray_current_point,
-                cube_impact_normal((*node_bounds), *ray_current_point)
-            );
-        } else { // brick is parted
-            set_brick_used(brick_descriptor & 0x0000FFFF);
-            var brick_point = *ray_current_point;
-            let leaf_brick_hit = traverse_brick(
-                ray, &brick_point,
-                brick_descriptor & 0x0000FFFF,
-                node_bounds, ray_scale_factors, direction_lut_index,
-                max_distance
-            );
-            if leaf_brick_hit.hit == true {
-                let unit_voxel_size = round((*node_bounds).size / f32(boxtree_meta_data.tree_properties & 0x0000FFFF));
-                return OctreeRayIntersection(
-                    true,
-                    color_palette[voxels[leaf_brick_hit.flat_index] & 0x0000FFFF],
-                    brick_point,
-                    cube_impact_normal(
-                        Cube(
-                            ((*node_bounds).min_position + (vec3f(leaf_brick_hit.index) * unit_voxel_size)),
-                            unit_voxel_size,
-                        ),
-                        brick_point
-                    )
-                );
-            }
-        }
-    }
-    return NO_RAY_INTERSECTION;
-}
-
 // Unique to this implementation, not adapted from rust code
 /// Traverses the node to provide information about how the occupied bits of the node
 /// and the given ray collides. The higher the number, the closer the hit is.
@@ -624,9 +573,6 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
     var current_node_key = BOXTREE_ROOT_NODE_KEY;
     var target_sectant = OOB_SECTANT;
     var missing_data_color = vec3f(0.);
-    var mip_level = log2( // log4 isn't available in WGSL
-        f32(boxtree_meta_data.boxtree_size / (boxtree_meta_data.tree_properties & 0x0000FFFF))
-    ) / 2.;
 
     let root_intersect = cube_intersect_ray(current_bounds, ray);
     if(root_intersect.hit){
@@ -681,37 +627,6 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                 return NO_RAY_INTERSECTION;
             }
 
-            if( // In case MIPs are enabled
-                (0 != (boxtree_meta_data.tree_properties & 0x00010000))
-                &&( // In case current node MIP level is smaller, than the required MIP level
-                    mip_level <
-                    ( // Note: Aligning to bound borders deemed undesriable artefacts
-                        length( // based on ray current travel distance
-                            viewport.origin - ( // aligned to nearest cube edges(based on current MIP level)
-                                round(ray_current_point / (mip_level * 2.)) * (mip_level * 2.)
-                            )
-                        )
-                        / f32(viewport.frustum.z)
-                    )
-                )
-            ){
-                if( // node has MIP which is not uploaded
-                    ( 0 != (node_metadata[current_node_key / 8] & (0x01u << (16 + (current_node_key % 8u)))) )
-                    && node_mips[current_node_key] == EMPTY_MARKER
-                ){
-                    request_node(current_node_key, OOB_SECTANT);
-                } else {
-                    let mip_hit = probe_MIP(
-                        ray, &ray_current_point,
-                        current_node_key, &current_bounds,
-                        &ray_scale_factors, direction_lut_index,
-                        max_distance
-                    );
-                    if mip_hit.hit {
-                        return mip_hit;
-                    }
-                }
-            }
             var target_child_descriptor = node_children[(current_node_key * BOX_NODE_CHILDREN_COUNT) + target_sectant];
             if(
                 // In case node doesn't yet have the target child node uploaded to GPU
@@ -746,22 +661,6 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                             &ray_scale_factors
                         ))
                     );
-                }
-                
-                if ( // Probe MIP at data miss, if enabled. this code creates those cyan missing data cubes.
-                    0 != (boxtree_meta_data.tree_properties & 0x00010000)
-                    && stage_data.stage != VHX_PREPASS_STAGE_ID
-                ){
-                    var mip_hit = probe_MIP(
-                        ray, &ray_current_point,
-                        current_node_key, &current_bounds,
-                        &ray_scale_factors, direction_lut_index,
-                        max_distance
-                    );
-                    if mip_hit.hit {
-                        mip_hit.color -= vec4f(missing_data_color, 0.);
-                        return mip_hit;
-                    }
                 }
             } else if( // node is leaf, its target points inside and is available
                 target_sectant != OOB_SECTANT
@@ -833,7 +732,6 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                 )
             ) {
                 // POP
-                mip_level += 1.;
                 node_stack_pop(&node_stack, &node_stack_meta);
                 target_bounds = current_bounds;
                 current_bounds.size *= f32(BOX_NODE_DIMENSION);
@@ -890,7 +788,6 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                     + (SECTANT_OFFSET_REGION_LUT[target_sectant] * current_bounds.size)
                 );
                 node_stack_push(&node_stack, &node_stack_meta, target_child_descriptor);
-                mip_level -= 1.;
             } else {
                 // ADVANCE
                 /*// +++ DEBUG +++
@@ -1055,15 +952,12 @@ var<storage, read> node_metadata: array<u32>;
 var<storage, read> node_children: array<u32>;
 
 @group(2) @binding(4)
-var<storage, read> node_mips: array<u32>;
-
-@group(2) @binding(5)
 var<storage, read> node_occupied_bits: array<u32>;
 
-@group(2) @binding(6)
+@group(2) @binding(5)
 var<storage, read> voxels: array<PaletteIndexValues>;
 
-@group(2) @binding(7)
+@group(2) @binding(6)
 var<storage, read> color_palette: array<vec4f>;
 
 const SKY_COLOR: vec3f = vec3f(0.5,1.0,1.0);

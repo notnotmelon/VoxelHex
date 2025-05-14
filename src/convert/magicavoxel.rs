@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{MIPMapStrategy, OctreeError},
+        types::{OctreeError},
         Albedo, BoxTree, BoxTreeEntry, V3c, VoxelData,
     },
     spatial::math::{convert_coordinate, CoordinateSystemType},
@@ -198,55 +198,6 @@ fn iterate_vox_tree<F: FnMut(&Model, &V3c<i32>, &Matrix3<i8>)>(
                 }
             }
         }
-    }
-}
-
-impl MIPMapStrategy {
-    pub fn load_vox_file<
-        #[cfg(all(feature = "bytecode", feature = "serialization"))] T: FromBencode
-            + ToBencode
-            + Serialize
-            + DeserializeOwned
-            + Default
-            + Eq
-            + Clone
-            + Hash
-            + VoxelData,
-        #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
-        #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
-        #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    >(
-        self,
-        brick_dimension: u32,
-        filename: &str,
-    ) -> Result<BoxTree<T>, &'static str> {
-        let (vox_data, min_position, mut max_position) =
-            BoxTree::<T>::load_vox_file_internal(filename);
-        max_position -= min_position;
-        let max_position = max_position.x.max(max_position.y).max(max_position.z);
-        let tree_size = (max_position as f32 / brick_dimension as f32)
-            .log(4.)
-            .ceil() as u32;
-        let tree_size = 4_u32.pow(tree_size) * brick_dimension;
-
-        let mut shocovox_boxtree =
-            BoxTree::<T>::new(tree_size, brick_dimension).unwrap_or_else(|err| {
-                panic!(
-                    "Expected to build a valid boxtree with dimension {:?} and brick dimension {:?}; Instead: {:?}",
-                    tree_size,
-                    brick_dimension,
-                    err
-                )
-            });
-
-        shocovox_boxtree.mip_map_strategy.enabled = self.enabled;
-        shocovox_boxtree.mip_map_strategy.resampling_methods = self.resampling_methods.clone();
-        shocovox_boxtree
-            .mip_map_strategy
-            .resampling_color_matching_thresholds =
-            self.resampling_color_matching_thresholds.clone();
-        shocovox_boxtree.load_vox_data_internal(&vox_data, &min_position);
-        Ok(shocovox_boxtree)
     }
 }
 

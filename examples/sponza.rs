@@ -53,7 +53,7 @@ fn main() {
 #[cfg(feature = "bevy_wgpu")]
 fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
     // fill boxtree with data
-    let mut tree: BoxTree;
+    let tree: BoxTree;
     let tree_path = "example_junk_sponza";
     if std::path::Path::new(tree_path).exists() {
         tree = BoxTree::load(&tree_path).ok().unwrap();
@@ -67,8 +67,6 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
             Err(message) => panic!("Parsing model file failed with message: {message}"),
         };
         println!("Loaded sponza.vox");
-        tree.albedo_mip_map_resampling_strategy()
-            .switch_albedo_mip_maps(true);
         tree.save(&tree_path).ok().unwrap();
     }
 

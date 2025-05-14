@@ -179,22 +179,12 @@ impl FromWorld for VhxRenderPipeline {
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Storage { read_only: true },
                         has_dynamic_offset: false,
-                        min_binding_size: Some(<Vec<u32> as ShaderType>::min_size()),
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: 6u32,
-                    visibility: ShaderStages::COMPUTE,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
                         min_binding_size: Some(<Vec<PaletteIndexValues> as ShaderType>::min_size()),
                     },
                     count: None,
                 },
                 BindGroupLayoutEntry {
-                    binding: 7u32,
+                    binding: 6u32,
                     visibility: ShaderStages::COMPUTE,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Storage { read_only: true },
@@ -211,7 +201,7 @@ impl FromWorld for VhxRenderPipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let update_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             zero_initialize_workgroup_memory: false,
-            label: None,
+            label: Some(std::borrow::Cow::Borrowed("MainRenderComputeBindGroup")),
             layout: vec![
                 render_stage_bind_group_layout.clone(),
                 spyglass_bind_group_layout.clone(),
@@ -623,14 +613,6 @@ fn create_view_resources(
     });
 
     let mut buffer = StorageBuffer::new(Vec::<u8>::new());
-    buffer.write(&render_data.node_mips).unwrap();
-    let node_mips_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-        label: Some("BoxTree Node MIPs Buffer"),
-        contents: &buffer.into_inner(),
-        usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-    });
-
-    let mut buffer = StorageBuffer::new(Vec::<u8>::new());
     buffer.write(&render_data.node_ocbits).unwrap();
     let node_ocbits_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
         label: Some("BoxTree Node Occupied Bits Buffer"),
@@ -685,18 +667,14 @@ fn create_view_resources(
             },
             bevy::render::render_resource::BindGroupEntry {
                 binding: 4,
-                resource: node_mips_buffer.as_entire_binding(),
-            },
-            bevy::render::render_resource::BindGroupEntry {
-                binding: 5,
                 resource: node_ocbits_buffer.as_entire_binding(),
             },
             bevy::render::render_resource::BindGroupEntry {
-                binding: 6,
+                binding: 5,
                 resource: voxels_buffer.as_entire_binding(),
             },
             bevy::render::render_resource::BindGroupEntry {
-                binding: 7,
+                binding: 6,
                 resource: color_palette_buffer.as_entire_binding(),
             },
         ],
@@ -714,7 +692,6 @@ fn create_view_resources(
         used_bits_buffer,
         node_metadata_buffer,
         node_children_buffer,
-        node_mips_buffer,
         node_ocbits_buffer,
         voxels_buffer,
         color_palette_buffer,
@@ -844,12 +821,6 @@ pub(crate) fn prepare_bind_groups(
             0,
             &buffer.into_inner(),
         );
-
-        let mut buffer = StorageBuffer::new(Vec::<u8>::new());
-        buffer.write(&render_data.node_mips).unwrap();
-        pipeline
-            .render_queue
-            .write_buffer(&resources.node_mips_buffer, 0, &buffer.into_inner());
 
         let mut buffer = StorageBuffer::new(Vec::<u8>::new());
         buffer.write(&render_data.node_ocbits).unwrap();

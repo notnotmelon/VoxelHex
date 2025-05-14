@@ -99,65 +99,6 @@ pub struct Albedo {
 pub(crate) type PaletteIndexValues = u32;
 pub(crate) type NodeData = NodeContent<PaletteIndexValues>;
 pub(crate) type NodeConnection = NodeChildren<u32>;
-pub type OctreeMIPMapStrategy = HashMap<usize, MIPResamplingMethods>;
-
-/// Implemented methods for MIP sampling. Default is set for
-/// all MIP leveles not mentioned in the strategy
-#[derive(Debug, Default, Clone, PartialEq)]
-pub enum MIPResamplingMethods {
-    /// MIP sampled from the MIPs below it, each voxel is the gamma corrected
-    /// average of the voxels the cell contains on the same space one level below.
-    /// (Gamma is set to be 2.)
-    /// Warning: this introduces a significant amount of new colors into the palette
-    #[default]
-    BoxFilter,
-
-    /// MIP sampled from the MIPs below it, each voxel is chosen from
-    /// voxels the cell contains on the same space one level below,
-    /// Introduces no new colors as current colors are reused
-    PointFilter,
-
-    /// Same as @PointFilter, but the voxels are sampled from
-    /// the lowest possible level, instead of MIPs.
-    /// It takes the most dominant voxel from the bottom, thus "BD"
-    /// --> Bottom Dominant (It's nothing kinky)
-    /// On level 1 it behaves like the regular version of itself
-    PointFilterBD,
-
-    /// MIP sampled from the MIPs below it, similar voxels are grouped together
-    /// the sampled voxel is the average of the largest group
-    /// @Albedo color range is assumed(0-255)
-    /// f32 parameter is the threshold for similarity with a 0.001 resolution
-    Posterize(f32),
-
-    /// Same as @Posterize, but the voxels are sampled from
-    /// the lowest possible level, instead of MIPs.
-    /// It takes the most dominant voxel from the bottom, thus "BD"
-    /// f32 parameter is the threshold for similarity with a 0.001 resolution
-    /// On level 1 it behaves like the regular version of itself
-    PosterizeBD(f32),
-}
-
-/// A helper object for setting Octree MIP map resampling strategy
-pub struct StrategyUpdater<'a, T: Default + Clone + Eq + Hash>(pub(crate) &'a mut BoxTree<T>);
-
-/// Configuration object for storing MIP map strategy
-/// Don't forget to @recalculate_mip after you've enabled it, as it is
-/// only updated on boxtree updates otherwise.
-/// Activating MIP maps will require a larger GPU view (see @OctreeGPUHost::create_new_view)
-/// As the MIP bricks will take space from other bricks.
-#[derive(Clone)]
-pub struct MIPMapStrategy {
-    /// Decides if the strategy is enabled, see @Octree/node_mips
-    pub(crate) enabled: bool,
-
-    /// The MIP resampling strategy for different MIP levels
-    pub(crate) resampling_methods: HashMap<usize, MIPResamplingMethods>,
-
-    /// Color similarity threshold to reduce adding
-    /// new colors during MIP operations for each MIP level. Has a resolution of 0.001
-    pub(crate) resampling_color_matching_thresholds: HashMap<usize, f32>,
-}
 
 /// Sparse 64Tree of Voxel Bricks, where each leaf node contains a brick of voxels.
 /// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
@@ -181,9 +122,6 @@ where
     /// Node Connections
     pub(crate) node_children: Vec<NodeConnection>,
 
-    /// Brick data for each node containing a simplified representation, or all empties if the feature is disabled
-    pub(crate) node_mips: Vec<BrickData<PaletteIndexValues>>,
-
     /// The albedo colors used by the boxtree. Maximum 65535 colors can be used at once
     /// because of a limitation on GPU raytracing, to spare space index values refering the palettes
     /// are stored on 2 Bytes
@@ -200,7 +138,4 @@ where
 
     /// Feature flag to enable/disable simplification attempts during boxtree update operations
     pub auto_simplify: bool,
-
-    /// The stored MIP map strategy
-    pub(crate) mip_map_strategy: MIPMapStrategy,
 }

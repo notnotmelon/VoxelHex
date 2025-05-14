@@ -2,15 +2,11 @@ pub mod types;
 pub mod update;
 
 mod detail;
-pub(crate) mod mipmap;
 mod node;
-
-#[cfg(test)]
-mod tests;
 
 pub use crate::spatial::math::vector::{V3c, V3cf32};
 pub use types::{
-    Albedo, BoxTree, BoxTreeEntry, MIPMapStrategy, MIPResamplingMethods, StrategyUpdater, VoxelData,
+    Albedo, BoxTree, BoxTreeEntry, VoxelData,
 };
 
 use crate::{
@@ -196,12 +192,10 @@ impl<
             brick_dim: brick_dimension,
             nodes,
             node_children: vec![NodeChildren::default()],
-            node_mips: vec![BrickData::Empty],
             voxel_color_palette: vec![],
             voxel_data_palette: vec![],
             map_to_color_index_in_palette: HashMap::new(),
             map_to_data_index_in_palette: HashMap::new(),
-            mip_map_strategy: MIPMapStrategy::default(),
         })
     }
 
@@ -328,10 +322,5 @@ impl<
     /// Tells the radius of the area covered by the boxtree
     pub fn get_size(&self) -> u32 {
         self.boxtree_size
-    }
-
-    /// Object to set the MIP map strategy for each MIP level inside the boxtree
-    pub fn albedo_mip_map_resampling_strategy(&mut self) -> StrategyUpdater<T> {
-        StrategyUpdater(self)
     }
 }

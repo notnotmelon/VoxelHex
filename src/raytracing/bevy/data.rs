@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         types::{BrickData, NodeContent, PaletteIndexValues},
-        BoxTree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT, OOB_SECTANT,
+        BoxTree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
     raytracing::bevy::{
@@ -50,7 +50,7 @@ fn boxtree_properties<
 >(
     tree: &BoxTree<T>,
 ) -> u32 {
-    (tree.brick_dim & 0x0000FFFF) | ((tree.mip_map_strategy.is_enabled() as u32) << 16)
+    tree.brick_dim & 0x0000FFFF
 }
 
 impl<
@@ -117,7 +117,6 @@ impl<
     ) -> usize {
         let gpu_data_handler = BoxTreeGPUDataHandler {
             render_data: BoxTreeRenderData {
-                mips_enabled: self.tree.mip_map_strategy.is_enabled(),
                 boxtree_meta: BoxTreeMetaData {
                     boxtree_size: self.tree.boxtree_size,
                     tree_properties: boxtree_properties(&self.tree),
@@ -132,7 +131,6 @@ impl<
                 node_metadata: vec![0; (nodes_in_view as f32 / 8.).ceil() as usize],
                 node_ocbits: vec![0; nodes_in_view * 2],
                 node_children: vec![empty_marker(); nodes_in_view * BOX_NODE_CHILDREN_COUNT],
-                node_mips: vec![empty_marker(); nodes_in_view],
                 color_palette: vec![Vec4::ZERO; u16::MAX as usize],
             },
             victim_node: VictimPointer::new(nodes_in_view),
@@ -416,12 +414,6 @@ pub(crate) fn write_to_gpu<
                     &pipeline.render_queue,
                 );
                 write_range_to_buffer(
-                    &view.data_handler.render_data.node_mips,
-                    0..1,
-                    &resources.node_mips_buffer,
-                    &pipeline.render_queue,
-                );
-                write_range_to_buffer(
                     &view.data_handler.render_data.node_ocbits,
                     0..2,
                     &resources.node_ocbits_buffer,
@@ -449,22 +441,19 @@ pub(crate) fn write_to_gpu<
 
         // Data updates for BoxTree MIP map feature
         let tree = &tree_host.tree;
-        if view.data_handler.render_data.mips_enabled != tree.mip_map_strategy.is_enabled() {
-            // Regenerate feature bits
-            view.data_handler.render_data.boxtree_meta.tree_properties = boxtree_properties(tree);
+        // Regenerate feature bits
+        view.data_handler.render_data.boxtree_meta.tree_properties = boxtree_properties(tree);
 
-            // Write to GPU
-            let mut buffer = UniformBuffer::new(Vec::<u8>::new());
-            buffer
-                .write(&view.data_handler.render_data.boxtree_meta)
-                .unwrap();
-            pipeline.render_queue.write_buffer(
-                &resources.node_metadata_buffer,
-                0,
-                &buffer.into_inner(),
-            );
-            view.data_handler.render_data.mips_enabled = tree.mip_map_strategy.is_enabled()
-        }
+        /*        // Write to GPU
+        let mut buffer = UniformBuffer::new(Vec::<u8>::new());
+        buffer
+            .write(&view.data_handler.render_data.boxtree_meta)
+            .unwrap();
+        render_queue.write_buffer(
+            &resources.node_metadata_buffer,
+            0,
+            &buffer.into_inner(),
+        );*/
 
         // Handle node requests, update cache
         let mut node_meta_updated = Range {
@@ -481,10 +470,6 @@ pub(crate) fn write_to_gpu<
         };
         let mut node_children_updated = Range {
             start: view.data_handler.render_data.node_children.len(),
-            end: 0,
-        };
-        let mut node_mips_updated = Range {
-            start: view.data_handler.render_data.node_mips.len(),
             end: 0,
         };
         let mut node_requests = view.spyglass.node_requests.clone();
@@ -522,30 +507,6 @@ pub(crate) fn write_to_gpu<
                     .contains_left(&requested_parent_node_key)
             {
                 // Do not accept a request if the requester meta is already overwritten or deleted
-                continue;
-            }
-
-            // In case MIP is requested, not node child
-            if OOB_SECTANT == requested_child_sectant {
-                // Upload MIP to bricks
-                let (child_descriptor, cache_update) =
-                    view.data_handler
-                        .add_brick(tree, requested_parent_node_key, OOB_SECTANT);
-
-                used_bits_updated.start = used_bits_updated
-                    .start
-                    .min(cache_update.modified_usage_range.start);
-                used_bits_updated.end = used_bits_updated
-                    .end
-                    .max(cache_update.modified_usage_range.end);
-
-                modified_nodes.extend(cache_update.modified_nodes);
-                extend_brick_updates(&mut modified_bricks, cache_update.brick_updates);
-
-                // Update mip index
-                view.data_handler.render_data.node_mips[requested_parent_meta_index] =
-                    child_descriptor as u32;
-
                 continue;
             }
 
@@ -693,8 +654,6 @@ pub(crate) fn write_to_gpu<
             node_children_updated.end = node_children_updated
                 .end
                 .max(modified_node_index * BOX_NODE_CHILDREN_COUNT + BOX_NODE_CHILDREN_COUNT);
-            node_mips_updated.start = node_mips_updated.start.min(*modified_node_index);
-            node_mips_updated.end = node_mips_updated.end.max(modified_node_index + 1);
         }
 
         // write back updated data
@@ -750,12 +709,6 @@ pub(crate) fn write_to_gpu<
             &view.data_handler.render_data.node_ocbits,
             ocbits_updated,
             &resources.node_ocbits_buffer,
-            render_queue,
-        );
-        write_range_to_buffer(
-            &view.data_handler.render_data.node_mips,
-            node_mips_updated,
-            &resources.node_mips_buffer,
             render_queue,
         );
 
