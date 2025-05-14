@@ -26,13 +26,13 @@ pub enum BoxTreeEntry<'a, T: VoxelData> {
     Empty,
 
     /// Albedo data is available in boxtree query
-    Visual(&'a Albedo),
+    Visual(&'a Color),
 
     /// User data is avaliable in boxtree query
     Informative(&'a T),
 
     /// Both user data and color information is available in boxtree query
-    Complex(&'a Albedo, &'a T),
+    Complex(&'a Color, &'a T),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,10 +84,10 @@ pub trait VoxelData {
     fn is_empty(&self) -> bool;
 }
 
-/// Color properties of a voxel
+/// Linear RGBA color. Each channel ranges from 0-255.
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Albedo {
+pub struct Color {
     pub r: u8,
     pub g: u8,
     pub b: u8,
@@ -96,7 +96,7 @@ pub struct Albedo {
 
 pub(crate) type PaletteIndexValues = u32;
 
-/// Sparse 64Tree of Voxel Bricks, where each leaf node contains a brick of voxels.
+/// Sparse contree of Voxel Bricks, where each leaf node contains a brick of voxels.
 /// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
 /// A Brick can be indexed directly, as opposed to the boxtree which is essentially a
 /// tree-graph where each node has 64 children.
@@ -121,12 +121,12 @@ where
     /// The albedo colors used by the boxtree. Maximum 65535 colors can be used at once
     /// because of a limitation on GPU raytracing, to spare space index values refering the palettes
     /// are stored on 2 Bytes
-    pub(crate) voxel_color_palette: Vec<Albedo>, // referenced by @nodes
+    pub(crate) voxel_color_palette: Vec<Color>, // referenced by @nodes
     pub(crate) voxel_data_palette: Vec<T>, // referenced by @nodes
 
     /// Cache variable to help find colors inside the color palette
     #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]
-    pub(crate) map_to_color_index_in_palette: HashMap<Albedo, usize>,
+    pub(crate) map_to_color_index_in_palette: HashMap<Color, usize>,
 
     /// Cache variable to help find user data in the palette
     #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]

@@ -13,7 +13,7 @@ use iyes_perf_ui::{
 
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
-    boxtree::{Albedo, BoxTree, BoxTreeEntry, V3c, V3cf32},
+    boxtree::{Color, BoxTree, BoxTreeEntry, V3c, V3cf32},
     raytracing::{BoxTreeGPUHost, Ray, VhxViewSet, Viewport},
 };
 
@@ -80,7 +80,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
                     };
                     tree.insert(
                         &V3c::new(x, y, z),
-                        &Albedo::default()
+                        &Color::default()
                             .with_red(r as u8)
                             .with_green(g as u8)
                             .with_blue(b as u8)
@@ -91,7 +91,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
                     assert_eq!(
                         tree.get(&V3c::new(x, y, z)),
                         BoxTreeEntry::Visual(
-                            &Albedo::default()
+                            &Color::default()
                                 .with_red(r as u8)
                                 .with_green(g as u8)
                                 .with_blue(b as u8)

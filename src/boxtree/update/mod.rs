@@ -8,7 +8,7 @@ use crate::{
     boxtree::{
         child_sectant_for,
         types::{BoxTreeEntry, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
-        Albedo, BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
+        Color, BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
     spatial::{
@@ -58,7 +58,7 @@ impl<
         match entry {
             BoxTreeEntry::Empty => empty_marker::<PaletteIndexValues>(),
             BoxTreeEntry::Visual(albedo) => {
-                if **albedo == Albedo::zero() {
+                if **albedo == Color::zero() {
                     return empty_marker();
                 }
                 let potential_new_albedo_index = self.map_to_color_index_in_palette.keys().len();
@@ -98,7 +98,7 @@ impl<
                 VoxelContent::pix_informal(data_index as u16)
             }
             BoxTreeEntry::Complex(albedo, data) => {
-                if **albedo == Albedo::zero() {
+                if **albedo == Color::zero() {
                     return self.add_to_palette(&BoxTreeEntry::Informative(*data));
                 } else if data.is_empty() {
                     return self.add_to_palette(&BoxTreeEntry::Visual(albedo));

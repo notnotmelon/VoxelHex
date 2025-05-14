@@ -1,11 +1,11 @@
 use crate::{
     boxtree::{
         types::{ContreeError},
-        Albedo, BoxTree, BoxTreeEntry, V3c, VoxelData,
+        Color, BoxTree, BoxTreeEntry, V3c, VoxelData,
     },
     spatial::math::{convert_coordinate, CoordinateSystemType},
 };
-use dot_vox::{Color, DotVoxData, Model, SceneNode, Size, Voxel};
+use dot_vox::{DotVoxData, Model, SceneNode, Size, Voxel};
 use nalgebra::Matrix3;
 use num_traits::Num;
 use std::{convert::From, hash::Hash};
@@ -16,8 +16,8 @@ use serde::{de::DeserializeOwned, Serialize};
 #[cfg(feature = "bytecode")]
 use bendy::{decoding::FromBencode, encoding::ToBencode};
 
-impl From<Albedo> for Color {
-    fn from(color: Albedo) -> Self {
+impl From<Color> for dot_vox::Color {
+    fn from(color: Color) -> Self {
         Self {
             r: color.r,
             g: color.g,
@@ -27,8 +27,8 @@ impl From<Albedo> for Color {
     }
 }
 
-impl From<Color> for Albedo {
-    fn from(color: Color) -> Self {
+impl From<dot_vox::Color> for Color {
+    fn from(color: dot_vox::Color) -> Self {
         Self {
             r: color.r,
             g: color.g,

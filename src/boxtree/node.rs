@@ -1,7 +1,7 @@
 use crate::boxtree::{
     empty_marker,
     types::{
-        Albedo, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData,
+        Color, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData,
     },
     BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
@@ -103,7 +103,7 @@ impl BrickData<PaletteIndexValues> {
     pub(crate) fn calculate_brick_occupied_bits<V: VoxelData>(
         brick: &[PaletteIndexValues],
         brick_dimension: usize,
-        color_palette: &[Albedo],
+        color_palette: &[Color],
         data_palette: &[V],
     ) -> u64 {
         let mut bitmap = 0;
@@ -134,7 +134,7 @@ impl BrickData<PaletteIndexValues> {
     pub(crate) fn calculate_occupied_bits<V: VoxelData>(
         &self,
         brick_dimension: usize,
-        color_palette: &[Albedo],
+        color_palette: &[Color],
         data_palette: &[V],
     ) -> u64 {
         match self {
@@ -173,7 +173,7 @@ impl BrickData<PaletteIndexValues> {
 
     pub(crate) fn contains_nothing<V: VoxelData>(
         &self,
-        color_palette: &[Albedo],
+        color_palette: &[Color],
         data_palette: &[V],
     ) -> bool {
         match self {
@@ -195,7 +195,7 @@ impl BrickData<PaletteIndexValues> {
     /// Tries to simplify brick data, returns true if the view was simplified during function call
     pub(crate) fn simplify<V: VoxelData>(
         &mut self,
-        color_palette: &[Albedo],
+        color_palette: &[Color],
         data_palette: &[V],
     ) -> bool {
         if let Some(homogeneous_type) = self.get_homogeneous_data() {
@@ -284,7 +284,7 @@ impl VoxelContent {
 
     pub(crate) fn pix_points_to_empty<V: VoxelData>(
         index: &PaletteIndexValues,
-        color_palette: &[Albedo],
+        color_palette: &[Color],
         data_palette: &[V],
     ) -> bool {
         debug_assert!(
@@ -308,7 +308,7 @@ impl VoxelContent {
 
     pub(crate) fn pix_get_ref<'a, V: VoxelData>(
         index: &PaletteIndexValues,
-        color_palette: &'a [Albedo],
+        color_palette: &'a [Color],
         data_palette: &'a [V],
     ) -> BoxTreeEntry<'a, V> {
         if Self::pix_data_is_none(index) && Self::pix_color_is_none(index) {
@@ -349,7 +349,7 @@ impl VoxelContent {
     /// Returns with true if content doesn't have any data
     pub(crate) fn is_empty<V: VoxelData>(
         &self,
-        color_palette: &[Albedo],
+        color_palette: &[Color],
         data_palette: &[V],
     ) -> bool {
         match self {

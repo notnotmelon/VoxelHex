@@ -1,5 +1,5 @@
 use crate::{
-    boxtree::{Albedo, BoxTree, BoxTreeEntry, BOX_NODE_CHILDREN_COUNT},
+    boxtree::{Color, BoxTree, BoxTreeEntry, BOX_NODE_CHILDREN_COUNT},
     spatial::{lut::SECTANT_OFFSET_LUT, math::vector::V3c},
     voxel_data,
 };
@@ -7,7 +7,7 @@ use num_traits::Zero;
 
 #[test]
 fn test_simplest_insert_and_get() {
-    let red: Albedo = 0xFF000001.into();
+    let red: Color = 0xFF000001.into();
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(0, 0, 0), &red)
@@ -18,9 +18,9 @@ fn test_simplest_insert_and_get() {
 
 #[test]
 fn test_simple_insert_and_get_where_dim_is_1() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
-    let blue: Albedo = 0x0000FFFF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
+    let blue: Color = 0x0000FFFF.into();
 
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
@@ -55,8 +55,8 @@ fn test_insert_empty() {
 
 #[test]
 fn test_complex_insert_and_get() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
 
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
@@ -111,9 +111,9 @@ fn test_complex_insert_and_get() {
 
 #[test]
 fn test_simple_insert_and_get_where_dim_is_2() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
-    let blue: Albedo = 0x0000FFFF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
+    let blue: Color = 0x0000FFFF.into();
 
     let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
     tree.auto_simplify = false;
@@ -141,8 +141,8 @@ fn test_simple_insert_and_get_where_dim_is_2() {
 
 #[test]
 fn test_insert_at_lod_where_dim_is_1() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
 
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
     tree.auto_simplify = false;
@@ -192,8 +192,8 @@ fn test_insert_at_lod_where_dim_is_1() {
 
 #[test]
 fn test_insert_at_lod_where_dim_is_2() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
 
     let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
     tree.auto_simplify = false;
@@ -245,7 +245,7 @@ fn test_insert_at_lod_where_dim_is_2() {
 fn test_case_simplified_insert_separated_by_clear_where_dim_is_1() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 1;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     for x in 0..tree_size {
@@ -279,7 +279,7 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_1() {
 fn test_case_simplified_insert_separated_by_clear_where_dim_is_2() {
     let tree_size = 8;
     const MATRIX_DIMENSION: u32 = 2;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     for x in 0..tree_size {
@@ -326,7 +326,7 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_2() {
 fn test_case_simplified_insert_separated_by_clear_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     for x in 0..tree_size {
@@ -357,8 +357,8 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_4() {
 
 #[test]
 fn test_update_color() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
 
@@ -372,7 +372,7 @@ fn test_update_color() {
 
 #[test]
 fn test_update_data() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
 
@@ -387,7 +387,7 @@ fn test_update_data() {
 
 #[test]
 fn test_update_empty() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
 
@@ -405,7 +405,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_1() {
     let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant of the leaf with the same data, it should become a uniform leaf
-    let color_base_original: Albedo = 0xFFFF00FF.into();
+    let color_base_original: Color = 0xFFFF00FF.into();
 
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
         tree.insert(
@@ -441,7 +441,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_1() {
     let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant of the leaf with the same data, it should become a uniform leaf
-    let color_base_original: Albedo = 0xFFFF00FF.into();
+    let color_base_original: Color = 0xFFFF00FF.into();
 
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
         let start_pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant]);
@@ -452,7 +452,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_1() {
     assert!(item_at_000 == (&color_base_original).into());
 
     // Separate Uniform leaf by overwriting a voxel
-    let color_base_modified: Albedo = 0xFFFF00FF.into();
+    let color_base_modified: Color = 0xFFFF00FF.into();
     tree.insert(&V3c::unit(0), &color_base_modified)
         .ok()
         .unwrap();
@@ -480,7 +480,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_4() {
                 for z in 0..MATRIX_DIMENSION {
                     tree.insert(
                         &(start_pos + V3c::new(x, y, z)),
-                        &Albedo::from(color_base + sectant as u32),
+                        &Color::from(color_base + sectant as u32),
                     )
                     .expect("Tree insertion error");
                 }
@@ -489,7 +489,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_4() {
     }
 
     // Separate Uniform leaf by clearing a voxel
-    assert!(tree.get(&V3c::unit(0)) == (&Albedo::from(color_base)).into());
+    assert!(tree.get(&V3c::unit(0)) == (&Color::from(color_base)).into());
     tree.clear(&V3c::unit(0)).ok().unwrap();
     assert!(tree.get(&V3c::unit(0)) == BoxTreeEntry::Empty);
 
@@ -504,7 +504,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_4() {
                     }
                     assert!(
                         tree.get(&(start_pos + V3c::new(x, y, z)))
-                            == (&Albedo::from(color_base + sectant as u32)).into(),
+                            == (&Color::from(color_base + sectant as u32)).into(),
                     );
                 }
             }
@@ -527,7 +527,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
                 for z in 0..MATRIX_DIMENSION {
                     tree.insert(
                         &(start_pos + V3c::new(x, y, z)),
-                        &Albedo::from(color_base + sectant as u32),
+                        &Color::from(color_base + sectant as u32),
                     )
                     .ok()
                     .unwrap();
@@ -537,8 +537,8 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
     }
 
     // Separate Uniform leaf by overwriting a voxel
-    assert!(tree.get(&V3c::unit(0)) == (&Albedo::from(color_base)).into());
-    let color_base_modified: Albedo = 0x000000FF.into();
+    assert!(tree.get(&V3c::unit(0)) == (&Color::from(color_base)).into());
+    let color_base_modified: Color = 0x000000FF.into();
     tree.insert(&V3c::unit(0), &color_base_modified)
         .ok()
         .unwrap();
@@ -555,7 +555,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
                     }
                     assert!(
                         tree.get(&(start_pos + V3c::new(x, y, z)))
-                            == (&Albedo::from(color_base + sectant as u32)).into(),
+                            == (&Color::from(color_base + sectant as u32)).into(),
                     );
                 }
             }
@@ -576,7 +576,7 @@ fn test_uniform_parted_brick_leaf_separated_by_clear_where_dim_is_4() {
                 for z in 0..MATRIX_DIMENSION {
                     let pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * tree_size as f32)
                         + V3c::new(x, y, z);
-                    let color_for_pos = Albedo {
+                    let color_for_pos = Color {
                         r: (x - (x % (MATRIX_DIMENSION / 2))) as u8,
                         g: (y - (y % (MATRIX_DIMENSION / 2))) as u8,
                         b: (z - (z % (MATRIX_DIMENSION / 2))) as u8,
@@ -597,7 +597,7 @@ fn test_uniform_parted_brick_leaf_separated_by_clear_where_dim_is_4() {
     }
 
     // Separate Uniform leaf by clearing a voxel
-    assert_eq!(tree.get(&V3c::unit(0)), (&Albedo::from(0x000000FF)).into());
+    assert_eq!(tree.get(&V3c::unit(0)), (&Color::from(0x000000FF)).into());
     tree.clear(&V3c::unit(1)).ok().unwrap();
     assert!(tree.get(&V3c::unit(1)).is_none());
 
@@ -613,7 +613,7 @@ fn test_uniform_parted_brick_leaf_separated_by_clear_where_dim_is_4() {
                     } else {
                         assert_eq!(
                             tree.get(&pos),
-                            (&Albedo {
+                            (&Color {
                                 r: (x - (x % (MATRIX_DIMENSION / 2))) as u8,
                                 g: (y - (y % (MATRIX_DIMENSION / 2))) as u8,
                                 b: (z - (z % (MATRIX_DIMENSION / 2))) as u8,
@@ -643,17 +643,17 @@ fn test_simple_uniform_parted_brick_leaf_overwrites_separated_by_insert_where_di
     let mut color_base = color_base_original;
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
         let start_pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * MATRIX_DIMENSION as f32);
-        tree.insert_at_lod(&start_pos, MATRIX_DIMENSION, &Albedo::from(color_base))
+        tree.insert_at_lod(&start_pos, MATRIX_DIMENSION, &Color::from(color_base))
             .ok()
             .unwrap();
         color_base += 0x02;
     }
 
     let item_at_000 = tree.get(&V3c::unit(0));
-    assert_eq!(item_at_000, (&Albedo::from(color_base_original)).into());
+    assert_eq!(item_at_000, (&Color::from(color_base_original)).into());
 
     // Separate Uniform leaf by setting a voxel
-    let color_base_modified: Albedo = 0x000000FF.into();
+    let color_base_modified: Color = 0x000000FF.into();
     tree.insert(&V3c::unit(0), &color_base_modified)
         .ok()
         .unwrap();
@@ -671,17 +671,17 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_2() {
     let mut color_base = color_base_original;
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
         let start_pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * tree_size as f32);
-        tree.insert_at_lod(&start_pos, MATRIX_DIMENSION, &Albedo::from(color_base))
+        tree.insert_at_lod(&start_pos, MATRIX_DIMENSION, &Color::from(color_base))
             .ok()
             .unwrap();
         color_base += 0x02;
     }
 
     let item_at_000 = tree.get(&V3c::unit(0));
-    assert_eq!(item_at_000, (&Albedo::from(color_base_original)).into());
+    assert_eq!(item_at_000, (&Color::from(color_base_original)).into());
 
     // Separate Uniform leaf by setting a voxel
-    let color_base_modified: Albedo = 0x000000FF.into();
+    let color_base_modified: Color = 0x000000FF.into();
     tree.insert(&V3c::unit(0), &color_base_modified)
         .ok()
         .unwrap();
@@ -699,10 +699,10 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_2() {
                     if x == 0 && y == 0 && z == 0 && sectant == 0 {
                         assert_eq!(
                             tree.get(&start_pos),
-                            (&Albedo::from(color_base_modified)).into()
+                            (&Color::from(color_base_modified)).into()
                         );
                     } else {
-                        assert_eq!(tree.get(&start_pos), (&Albedo::from(color_base)).into());
+                        assert_eq!(tree.get(&start_pos), (&Color::from(color_base)).into());
                     }
                     color_base += 0x02;
                 }
@@ -724,7 +724,7 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
                 for z in 0..MATRIX_DIMENSION {
                     let pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * tree_size as f32)
                         + V3c::new(x, y, z);
-                    let color_for_pos = Albedo {
+                    let color_for_pos = Color {
                         r: (x - (x % (MATRIX_DIMENSION / 2))) as u8,
                         g: (y - (y % (MATRIX_DIMENSION / 2))) as u8,
                         b: (z - (z % (MATRIX_DIMENSION / 2))) as u8,
@@ -745,17 +745,17 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
     }
 
     let item_at_000 = tree.get(&V3c::unit(0));
-    assert_eq!(item_at_000, (&Albedo::from(0x000000FF)).into());
+    assert_eq!(item_at_000, (&Color::from(0x000000FF)).into());
 
     // Separate Uniform leaf by setting a voxel
-    let color_base_modified: Albedo = 0xFF0000FF.into();
+    let color_base_modified: Color = 0xFF0000FF.into();
     tree.insert(&V3c::unit(1), &color_base_modified)
         .ok()
         .unwrap();
     assert_eq!(tree.get(&V3c::unit(1)), (&color_base_modified).into());
 
     let item_at_000 = tree.get(&V3c::unit(0));
-    assert_eq!(item_at_000, (&Albedo::from(0x000000FF)).into());
+    assert_eq!(item_at_000, (&Color::from(0x000000FF)).into());
 
     // The rest of the voxels should remain the same
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
@@ -765,11 +765,11 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
                     let pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * tree_size as f32)
                         + V3c::new(x, y, z);
                     if x == 1 && y == 1 && z == 1 && sectant == 0 {
-                        assert_eq!(tree.get(&pos), (&Albedo::from(color_base_modified)).into());
+                        assert_eq!(tree.get(&pos), (&Color::from(color_base_modified)).into());
                     } else {
                         assert_eq!(
                             tree.get(&pos),
-                            (&Albedo {
+                            (&Color {
                                 r: (x - (x % (MATRIX_DIMENSION / 2))) as u8,
                                 g: (y - (y % (MATRIX_DIMENSION / 2))) as u8,
                                 b: (z - (z % (MATRIX_DIMENSION / 2))) as u8,
@@ -790,7 +790,7 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
 
 #[test]
 fn test_insert_at_lod_with_unaligned_position_where_dim_is_4() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
 
     let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
     tree.auto_simplify = false;
@@ -830,7 +830,7 @@ fn test_insert_at_lod_with_unaligned_position_where_dim_is_4() {
 
 #[test]
 fn test_insert_at_lod_with_unaligned_size_where_dim_is_1() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
 
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
     tree.auto_simplify = false;
@@ -862,7 +862,7 @@ fn test_insert_at_lod_with_unaligned_size_where_dim_is_1() {
 
 #[test]
 fn test_insert_at_lod_with_unaligned_size_and_position_where_dim_is_1() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
 
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
     tree.auto_simplify = false;
@@ -895,7 +895,7 @@ fn test_insert_at_lod_with_unaligned_size_and_position_where_dim_is_1() {
 
 #[test]
 fn test_insert_at_lod_with_unaligned_size_where_dim_is_4() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
 
     let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
     tree.auto_simplify = false;
@@ -928,8 +928,8 @@ fn test_insert_at_lod_with_unaligned_size_where_dim_is_4() {
 
 #[test]
 fn test_insert_at_lod_with_simplify() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
 
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
 
@@ -984,8 +984,8 @@ fn test_insert_at_lod_with_simplify() {
 
 #[test]
 fn test_simplifyable_insert_and_get_where_dim_is_1() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
 
     const SIZE: u32 = 4;
     let mut tree: BoxTree = BoxTree::new(SIZE, 1).ok().unwrap();
@@ -1015,8 +1015,8 @@ fn test_simplifyable_insert_and_get_where_dim_is_1() {
 
 #[test]
 fn test_simplifyable_insert_and_get_where_dim_is_2() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
 
     const SIZE: u32 = 8;
     let mut tree: BoxTree = BoxTree::new(SIZE, 2).ok().unwrap();
@@ -1046,9 +1046,9 @@ fn test_simplifyable_insert_and_get_where_dim_is_2() {
 
 #[test]
 fn test_simple_clear_where_dim_is_1() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
-    let blue: Albedo = 0x0000FFFF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
+    let blue: Color = 0x0000FFFF.into();
 
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
@@ -1065,9 +1065,9 @@ fn test_simple_clear_where_dim_is_1() {
 
 #[test]
 fn test_simple_clear_where_dim_is_2() {
-    let red: Albedo = 0xFF0000FF.into();
-    let green: Albedo = 0x00FF00FF.into();
-    let blue: Albedo = 0x0000FFFF.into();
+    let red: Color = 0xFF0000FF.into();
+    let green: Color = 0x00FF00FF.into();
+    let blue: Color = 0x0000FFFF.into();
 
     let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
     tree.auto_simplify = false;
@@ -1094,7 +1094,7 @@ fn test_simple_clear_where_dim_is_2() {
 fn test_clear_small_part_of_large_node_ocbits_resolution_test() {
     const TREE_SIZE: u32 = 128;
     const BRICK_DIMENSION: u32 = 8;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert(&V3c::new(0, 1, 1), &red).ok().unwrap();
@@ -1111,7 +1111,7 @@ fn test_clear_small_part_of_large_node_ocbits_resolution_test() {
 fn test_set_small_part_of_large_node_ocbits_resolution_test_underflow() {
     const TREE_SIZE: u32 = 128;
     const BRICK_DIMENSION: u32 = 8;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert_at_lod(&V3c::new(33, 33, 33), 2, &red)
@@ -1128,7 +1128,7 @@ fn test_set_small_part_of_large_node_ocbits_resolution_test_underflow() {
 fn test_set_small_part_of_large_node_ocbits_resolution_test_overflow() {
     const TREE_SIZE: u32 = 128;
     const BRICK_DIMENSION: u32 = 8;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert(&V3c::new(31, 31, 31), &red).ok().unwrap();
@@ -1141,8 +1141,8 @@ fn test_set_small_part_of_large_node_ocbits_resolution_test_overflow() {
 
 #[test]
 fn test_double_clear() {
-    let albedo_black: Albedo = 0x000000FF.into();
-    let albedo_white: Albedo = 0xFFFFFFFF.into();
+    let albedo_black: Color = 0x000000FF.into();
+    let albedo_white: Color = 0xFFFFFFFF.into();
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(1, 0, 0), &albedo_black).ok().unwrap();
@@ -1159,7 +1159,7 @@ fn test_double_clear() {
 
 #[test]
 fn test_simplifyable_clear() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     const SIZE: u32 = 4;
     let mut tree: BoxTree = BoxTree::new(SIZE, 1).ok().unwrap();
 
@@ -1189,7 +1189,7 @@ fn test_simplifyable_clear() {
 
 #[test]
 fn test_simplifyable_clear_where_dim_is_2() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     const SIZE: u32 = 8;
     let mut tree: BoxTree = BoxTree::new(SIZE, 2).ok().unwrap();
 
@@ -1219,7 +1219,7 @@ fn test_simplifyable_clear_where_dim_is_2() {
 
 #[test]
 fn test_clear_to_nothing() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let entry = BoxTreeEntry::Visual(&albedo);
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
 
@@ -1252,7 +1252,7 @@ fn test_clear_edge_case() {
     std::env::set_var("RUST_BACKTRACE", "1");
     const TREE_SIZE: u32 = 64;
     const BRICK_DIMENSION: u32 = 16;
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.update(&V3c::new(1, 0, 0), voxel_data!(&0xFACEFEED))
@@ -1302,7 +1302,7 @@ fn test_clear_edge_case() {
 
 #[test]
 fn test_clear_at_lod_where_dim_is_1() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
@@ -1339,7 +1339,7 @@ fn test_clear_at_lod_where_dim_is_1() {
 #[test]
 fn test_clear_at_lod_where_dim_is_2() {
     std::env::set_var("RUST_BACKTRACE", "1");
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
@@ -1397,7 +1397,7 @@ fn test_clear_at_lod_where_dim_is_2() {
 
 #[test]
 fn test_clear_at_lod_with_unaligned_position_where_dim_is_1() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
@@ -1452,7 +1452,7 @@ fn test_clear_at_lod_with_unaligned_position_where_dim_is_1() {
 
 #[test]
 fn test_clear_at_lod_with_unaligned_position_where_dim_is_4() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
 
     tree.insert_at_lod(&V3c::new(0, 0, 0), 8, &albedo)
@@ -1506,7 +1506,7 @@ fn test_clear_at_lod_with_unaligned_position_where_dim_is_4() {
 
 #[test]
 fn test_clear_at_lod_with_unaligned_size_where_dim_is_1() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
         .ok()
@@ -1561,7 +1561,7 @@ fn test_clear_at_lod_with_unaligned_size_where_dim_is_1() {
 
 #[test]
 fn test_clear_at_lod_with_unaligned_size_where_dim_is_4() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
         .ok()
@@ -1612,7 +1612,7 @@ fn test_clear_at_lod_with_unaligned_size_where_dim_is_4() {
 
 #[test]
 fn test_clear_whole_nodes_where_dim_is_4() {
-    let albedo: Albedo = 0xFFAAEEFF.into();
+    let albedo: Color = 0xFFAAEEFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 8, &albedo)
         .ok()
@@ -1663,8 +1663,8 @@ fn test_clear_whole_nodes_where_dim_is_4() {
 
 #[test]
 fn test_overwrite_whole_nodes_where_dim_is_4() {
-    let red: Albedo = 0xFF0000FF.into();
-    let blue: Albedo = 0x0000FFFF.into();
+    let red: Color = 0xFF0000FF.into();
+    let blue: Color = 0x0000FFFF.into();
     let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 8, &red)
         .ok()
@@ -1727,8 +1727,8 @@ fn test_edge_case_boxtree_set() {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                tree.insert(&pos, &Albedo::from(x + y + z)).ok().unwrap();
-                assert!(tree.get(&pos) == (&Albedo::from(x + y + z)).into());
+                tree.insert(&pos, &Color::from(x + y + z)).ok().unwrap();
+                assert!(tree.get(&pos) == (&Color::from(x + y + z)).into());
             }
         }
     }
@@ -1737,7 +1737,7 @@ fn test_edge_case_boxtree_set() {
 #[test]
 fn test_case_inserting_empty() {
     let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
-    tree.insert(&V3c::new(3, 0, 0), &Albedo::zero())
+    tree.insert(&V3c::new(3, 0, 0), &Color::zero())
         .ok()
         .unwrap();
     let item = tree.get(&V3c::new(3, 0, 0));

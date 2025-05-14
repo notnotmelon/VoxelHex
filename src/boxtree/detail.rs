@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{Albedo, BoxTree, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData},
+        types::{Color, BoxTree, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData},
         BrickData, Cube, V3c, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -44,7 +44,7 @@ impl<T: Zero + PartialEq> VoxelData for T {
 // ░░░░░   ░░░░░ ░░░░░░░░░░░ ░░░░░░░░░░░  ░░░░░░░░░░ ░░░░░░░░░░      ░░░░░░░
 //####################################################################################
 
-impl Albedo {
+impl Color {
     pub fn with_red(mut self, r: u8) -> Self {
         self.r = r;
         self
@@ -69,7 +69,7 @@ impl Albedo {
         self.a == 0
     }
 
-    pub fn distance_from(&self, other: &Albedo) -> f32 {
+    pub fn distance_from(&self, other: &Color) -> f32 {
         let distance_r = self.r as f32 - other.r as f32;
         let distance_g = self.g as f32 - other.g as f32;
         let distance_b = self.b as f32 - other.b as f32;
@@ -79,14 +79,14 @@ impl Albedo {
     }
 }
 
-impl From<u32> for Albedo {
+impl From<u32> for Color {
     fn from(value: u32) -> Self {
         let a = (value & 0x000000FF) as u8;
         let b = ((value & 0x0000FF00) >> 8) as u8;
         let g = ((value & 0x00FF0000) >> 16) as u8;
         let r = ((value & 0xFF000000) >> 24) as u8;
 
-        Albedo::default()
+        Color::default()
             .with_red(r)
             .with_green(g)
             .with_blue(b)
@@ -94,10 +94,10 @@ impl From<u32> for Albedo {
     }
 }
 
-impl Add for Albedo {
-    type Output = Albedo;
-    fn add(self, other: Albedo) -> Albedo {
-        Albedo {
+impl Add for Color {
+    type Output = Color;
+    fn add(self, other: Color) -> Color {
+        Color {
             r: self.r + other.r,
             g: self.g + other.g,
             b: self.b + other.b,
@@ -106,10 +106,10 @@ impl Add for Albedo {
     }
 }
 
-impl Div<f32> for Albedo {
-    type Output = Albedo;
-    fn div(self, divisor: f32) -> Albedo {
-        Albedo {
+impl Div<f32> for Color {
+    type Output = Color;
+    fn div(self, divisor: f32) -> Color {
+        Color {
             r: (self.r as f32 / divisor).round() as u8,
             g: (self.g as f32 / divisor).round() as u8,
             b: (self.b as f32 / divisor).round() as u8,
@@ -118,7 +118,7 @@ impl Div<f32> for Albedo {
     }
 }
 
-impl Zero for Albedo {
+impl Zero for Color {
     fn zero() -> Self {
         Self {
             r: 0,

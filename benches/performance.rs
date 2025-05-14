@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main};
 
-use voxelhex::boxtree::{Albedo, BoxTree, V3c};
+use voxelhex::boxtree::{Color, BoxTree, V3c};
 
 #[cfg(feature = "raytracing")]
 use voxelhex::raytracing::Ray;
@@ -18,7 +18,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
                         || z < (tree_size / 4)
                         || ((tree_size / 2) <= x && (tree_size / 2) <= y && (tree_size / 2) <= z)
                     {
-                        tree.insert(&V3c::new(x, y, z), &Albedo::from(0x00ABCDEF))
+                        tree.insert(&V3c::new(x, y, z), &Color::from(0x00ABCDEF))
                             .ok()
                             .unwrap();
                     }
@@ -79,7 +79,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
                     rng.gen_range(0..tree_size),
                     rng.gen_range(0..tree_size),
                 ),
-                &Albedo::from(rng.gen_range(0..50000)),
+                &Color::from(rng.gen_range(0..50000)),
             )
             .expect("Octree insert to suceeed");
         }
@@ -91,7 +91,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
                         rng.gen_range(0..tree_size),
                         rng.gen_range(0..tree_size),
                     ),
-                    &Albedo::from(rng.gen_range(0..50000)),
+                    &Color::from(rng.gen_range(0..50000)),
                 )
                 .ok()
             });
@@ -128,7 +128,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
 
             c.bench_function("boxtree load", |b| {
                 b.iter(|| {
-                    let _tree_copy = BoxTree::<Albedo>::load("test_junk_boxtree").ok().unwrap();
+                    let _tree_copy = BoxTree::<Color>::load("test_junk_boxtree").ok().unwrap();
                 });
             });
         }

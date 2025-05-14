@@ -1,25 +1,25 @@
 use crate::boxtree::{
-    types::{Albedo, BrickData, VoxelChildren, VoxelContent},
+    types::{Color, BrickData, VoxelChildren, VoxelContent},
     BoxTree, BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
 
 #[test]
 fn test_node_brickdata_serialization() {
-    let brick_data_empty = BrickData::<Albedo>::Empty;
-    let brick_data_solid = BrickData::<Albedo>::Solid(Albedo::default().with_red(50));
-    let brick_data_parted = BrickData::Parted(vec![Albedo::default(); 4 * 4 * 4]);
+    let brick_data_empty = BrickData::<Color>::Empty;
+    let brick_data_solid = BrickData::<Color>::Solid(Color::default().with_red(50));
+    let brick_data_parted = BrickData::Parted(vec![Color::default(); 4 * 4 * 4]);
 
     let brick_data_empty_deserialized =
-        BrickData::<Albedo>::from_bencode(&brick_data_empty.to_bencode().ok().unwrap())
+        BrickData::<Color>::from_bencode(&brick_data_empty.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
     let brick_data_solid_deserialized =
-        BrickData::<Albedo>::from_bencode(&brick_data_solid.to_bencode().ok().unwrap())
+        BrickData::<Color>::from_bencode(&brick_data_solid.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
     let brick_data_parted_deserialized =
-        BrickData::<Albedo>::from_bencode(&brick_data_parted.to_bencode().ok().unwrap())
+        BrickData::<Color>::from_bencode(&brick_data_parted.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
 
@@ -132,7 +132,7 @@ fn test_node_children_serialization() {
 
 #[test]
 fn test_boxtree_file_io() {
-    let red: Albedo = 0xFF0000FF.into();
+    let red: Color = 0xFF0000FF.into();
     let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
@@ -182,7 +182,7 @@ fn test_big_boxtree_serialize() {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                let color = Albedo::from(x + y + z);
+                let color = Color::from(x + y + z);
                 tree.insert(&pos, &color).ok().unwrap();
 
                 if color.is_transparent() {
@@ -206,7 +206,7 @@ fn test_big_boxtree_serialize() {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                let color = Albedo::from(x + y + z);
+                let color = Color::from(x + y + z);
 
                 if color.is_transparent() {
                     continue;
@@ -220,7 +220,7 @@ fn test_big_boxtree_serialize() {
 #[test]
 fn test_small_boxtree_serialize_where_dim_is_1() {
     const TREE_SIZE: u32 = 4;
-    let color: Albedo = 1.into();
+    let color: Color = 1.into();
     let mut tree: BoxTree = BoxTree::new(TREE_SIZE, 1).ok().unwrap();
     tree.insert(&V3c::new(0, 0, 0), &color).ok().unwrap();
 
@@ -242,11 +242,11 @@ fn test_boxtree_serialize_where_dim_is_1() {
         for y in 0..TREE_SIZE {
             for z in 0..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                let albedo: Albedo = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
+                let albedo: Color = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
                 tree.insert(&pos, &albedo).ok().unwrap();
                 assert!(
                     tree.get(&pos)
-                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -261,7 +261,7 @@ fn test_boxtree_serialize_where_dim_is_1() {
                 let pos = V3c::new(x, y, z);
                 assert!(
                     deserialized.get(&pos)
-                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -275,11 +275,11 @@ fn test_boxtree_serialize_where_dim_is_2() {
         for y in 0..4 {
             for z in 0..4 {
                 let pos = V3c::new(x, y, z);
-                let albedo: Albedo = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
+                let albedo: Color = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
                 tree.insert(&pos, &albedo).ok().unwrap();
                 assert!(
                     tree.get(&pos)
-                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -294,7 +294,7 @@ fn test_boxtree_serialize_where_dim_is_2() {
                 let pos = V3c::new(x, y, z);
                 assert!(
                     deserialized.get(&pos)
-                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -308,7 +308,7 @@ fn test_big_boxtree_serialize_where_dim_is_2() {
         for y in 100..128 {
             for z in 100..128 {
                 let pos = V3c::new(x, y, z);
-                tree.insert(&pos, &Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF))
+                tree.insert(&pos, &Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF))
                     .ok()
                     .unwrap();
             }
@@ -324,7 +324,7 @@ fn test_big_boxtree_serialize_where_dim_is_2() {
                 let pos = V3c::new(x, y, z);
                 assert!(
                     deserialized.get(&pos)
-                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }

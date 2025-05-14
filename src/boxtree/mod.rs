@@ -6,7 +6,7 @@ mod node;
 
 pub use crate::spatial::math::vector::{V3c, V3cf32};
 pub use types::{
-    Albedo, BoxTree, BoxTreeEntry, VoxelData,
+    Color, BoxTree, BoxTreeEntry, VoxelData,
 };
 
 use crate::{
@@ -46,8 +46,8 @@ use bendy::{decoding::FromBencode, encoding::ToBencode};
 //  ██████████ █████  ░░█████    █████    █████   █████    █████
 // ░░░░░░░░░░ ░░░░░    ░░░░░    ░░░░░    ░░░░░   ░░░░░    ░░░░░
 //####################################################################################
-impl<'a, T: VoxelData> From<(&'a Albedo, &'a T)> for BoxTreeEntry<'a, T> {
-    fn from((albedo, data): (&'a Albedo, &'a T)) -> Self {
+impl<'a, T: VoxelData> From<(&'a Color, &'a T)> for BoxTreeEntry<'a, T> {
+    fn from((albedo, data): (&'a Color, &'a T)) -> Self {
         BoxTreeEntry::Complex(albedo, data)
     }
 }
@@ -62,14 +62,14 @@ macro_rules! voxel_data {
     };
 }
 
-impl<'a, T: VoxelData> From<&'a Albedo> for BoxTreeEntry<'a, T> {
-    fn from(albedo: &'a Albedo) -> Self {
+impl<'a, T: VoxelData> From<&'a Color> for BoxTreeEntry<'a, T> {
+    fn from(albedo: &'a Color) -> Self {
         BoxTreeEntry::Visual(albedo)
     }
 }
 
 impl<'a, T: VoxelData> BoxTreeEntry<'a, T> {
-    pub fn albedo(&self) -> Option<&'a Albedo> {
+    pub fn albedo(&self) -> Option<&'a Color> {
         match self {
             BoxTreeEntry::Empty => None,
             BoxTreeEntry::Visual(albedo) => Some(albedo),
