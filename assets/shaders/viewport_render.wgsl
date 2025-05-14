@@ -414,10 +414,11 @@ fn traverse_brick(
 
 struct OctreeRayIntersection {
     hit: bool,
-    albedo : vec4<f32>,
+    color : vec4<f32>,
     impact_point: vec3f,
     impact_normal: vec3f,
 }
+const NO_RAY_INTERSECTION = OctreeRayIntersection( false, vec4f(), vec3f(), vec3f() );
 
 fn probe_brick(
     ray: ptr<function, Line>,
@@ -443,7 +444,7 @@ fn probe_brick(
             // Whole brick is solid, ray hits it at first connection
             return OctreeRayIntersection(
                 true,
-                color_palette[brick_descriptor & 0x0000FFFF], // Albedo is in color_palette, it's not a brick index in this case
+                color_palette[brick_descriptor & 0x0000FFFF], // Ray color is stored inside color_palette, it's not a brick index in this case
                 *ray_current_point,
                 cube_impact_normal(*brick_bounds, *ray_current_point)
             );
@@ -482,7 +483,7 @@ fn probe_brick(
             }
         }
     }
-    return OctreeRayIntersection(false, vec4f(0.), *ray_current_point, vec3f(0., 0., 1.));
+    return NO_RAY_INTERSECTION;
 }
 
 fn probe_MIP(
@@ -503,7 +504,7 @@ fn probe_MIP(
             // Whole brick is solid, ray hits it at first connection
             return OctreeRayIntersection(
                 true,
-                color_palette[brick_descriptor & 0x0000FFFF], // Albedo is in color_palette, it's not a brick index in this case
+                color_palette[brick_descriptor & 0x0000FFFF], // Ray color is stored inside color_palette, it's not a brick index in this case
                 *ray_current_point,
                 cube_impact_normal((*node_bounds), *ray_current_point)
             );
@@ -533,7 +534,7 @@ fn probe_MIP(
             }
         }
     }
-    return OctreeRayIntersection(false, vec4f(0.), *ray_current_point, vec3f(0., 0., 1.));
+    return NO_RAY_INTERSECTION;
 }
 
 // Unique to this implementation, not adapted from rust code
@@ -633,6 +634,8 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
             ray_current_point += (*ray).direction * root_intersect.impact_distance;
         }
         target_sectant = hash_region(ray_current_point, current_bounds.size);
+    } else {
+        return NO_RAY_INTERSECTION;
     }
 
     /*// +++ DEBUG +++
@@ -675,7 +678,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                 stage_data.stage == VHX_PREPASS_STAGE_ID
                 && length(ray_current_point - (*ray).origin) >= max_distance
             ) {
-                return OctreeRayIntersection( false, vec4f(0.), ray_current_point, vec3f(0., 0., 1.) );
+                return NO_RAY_INTERSECTION;
             }
 
             if( // In case MIPs are enabled
@@ -704,7 +707,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                         &ray_scale_factors, direction_lut_index,
                         max_distance
                     );
-                    if true == mip_hit.hit {
+                    if mip_hit.hit {
                         return mip_hit;
                     }
                 }
@@ -745,7 +748,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                     );
                 }
                 
-                if ( // Probe MIP at data miss, if enabled
+                if ( // Probe MIP at data miss, if enabled. this code creates those cyan missing data cubes.
                     0 != (boxtree_meta_data.tree_properties & 0x00010000)
                     && stage_data.stage != VHX_PREPASS_STAGE_ID
                 ){
@@ -755,8 +758,8 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                         &ray_scale_factors, direction_lut_index,
                         max_distance
                     );
-                    if true == mip_hit.hit {
-                        mip_hit.albedo -= vec4f(missing_data_color, 0.);
+                    if mip_hit.hit {
+                        mip_hit.color -= vec4f(missing_data_color, 0.);
                         return mip_hit;
                     }
                 }
@@ -783,12 +786,12 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                     );
                 }
                 if hit.hit == true {
-                    hit.albedo -= vec4f(missing_data_color, 0.);
+                    hit.color -= vec4f(missing_data_color, 0.);
 
                     /*// +++ DEBUG +++
                     let relative_c_point = hit.impact_point - current_bounds.min_position;
                     if (relative_c_point.x < 5. || relative_c_point.y < 5. || relative_c_point.z < 5.) {
-                        hit.albedo.b = 1.;
+                        hit.color.b = 1.;
                     }
 
                     let bound_size_ratio = f32(target_bounds.size) / f32(boxtree_meta_data.boxtree_size) * 5.;
@@ -797,7 +800,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                         ||(abs(ray_current_point.y - target_bounds.min_position.y) < bound_size_ratio)
                         ||(abs(ray_current_point.z - target_bounds.min_position.z) < bound_size_ratio)
                     ){
-                        hit.albedo -= 0.5;
+                        hit.color -= 0.5;
                     }
 
                     /*if( // Display current bounds center
@@ -805,7 +808,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                         ||(abs(ray_current_point.y - (current_bounds.min_position.y + (current_bounds.size / 2.))) < bound_size_ratio)
                         ||(abs(ray_current_point.z - (current_bounds.min_position.z + (current_bounds.size / 2.))) < bound_size_ratio)
                     ){
-                        hit.albedo += 0.5;
+                        hit.color += 0.5;
                     }*/
                     */// --- DEBUG ---
                     return hit;
@@ -844,7 +847,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                     stage_data.stage == VHX_PREPASS_STAGE_ID
                     && length(ray_current_point - (*ray).origin) >= max_distance
                 ) {
-                    return OctreeRayIntersection( false, vec4f(0.), ray_point_before_pop, vec3f(0., 0., 1.) );
+                    return NO_RAY_INTERSECTION;
                 }
                 target_sectant = SECTANT_STEP_RESULT_LUT[
                     hash_region(
@@ -987,7 +990,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
             target_sectant = OOB_SECTANT;
         }
     } // while (ray inside root bounds)
-    return OctreeRayIntersection(false, vec4f(missing_data_color, 1.), ray_current_point, vec3f(0., 0., 1.));
+    return NO_RAY_INTERSECTION;
 }
 
 alias PaletteIndexValues = u32;
@@ -1063,6 +1066,9 @@ var<storage, read> voxels: array<PaletteIndexValues>;
 @group(2) @binding(7)
 var<storage, read> color_palette: array<vec4f>;
 
+const SKY_COLOR: vec3f = vec3f(0.5,1.0,1.0);
+const SKY_DISTANCE: f32 = 4294967296;
+
 @compute @workgroup_size(8, 8, 1)
 fn update(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
@@ -1093,13 +1099,22 @@ fn update(
         // In preprocess, for every pixel in the depth texture, traverse the model until
         // either there's a hit or the voxels are too far away to determine 
         // exactly which pixel belongs to which voxel
-        textureStore(
-            depth_texture, vec2u(invocation_id.xy),
-            vec4f(length(get_by_ray(&ray, 0.).impact_point - ray.origin))
-        );
+        var ray_result = get_by_ray(&ray, 0.);
+        if ray_result.hit == true {
+            textureStore(
+                depth_texture, vec2u(invocation_id.xy),
+                vec4f(length(ray_result.impact_point - ray.origin))
+            );
+        } else {
+            textureStore(
+                depth_texture, vec2u(invocation_id.xy),
+                vec4f(SKY_DISTANCE)
+            );
+        }
+        
     } else
     if stage_data.stage == VHX_RENDER_STAGE_ID {
-        var rgb_result = vec3f(0.5,1.0,1.0);
+        var rgb_result = vec3f();
 
         // get relevant pixels in depth
         let start_distance = min(
@@ -1138,12 +1153,12 @@ fn update(
         */// --- DEBUG ---
         if ray_result.hit == true {
             rgb_result = (
-                ray_result.albedo.rgb * (
+                ray_result.color.rgb * (
                     dot(ray_result.impact_normal, vec3f(-0.5,0.5,-0.5)) / 2. + 0.5
                 )
             ).rgb;
         } else {
-            rgb_result = (rgb_result + ray_result.albedo.rgb) / 2.;
+            rgb_result = SKY_COLOR;
         }
 
         let ao = calculate_ao(invocation_id, stage_data.output_resolution);
