@@ -354,6 +354,7 @@ impl<
             CoordinateSystemType::Rzup,
         );
         iterate_vox_tree(vox_tree, 0, |model, position_rzup, orientation| {
+            println!("{position_rzup:?}");
             let model_size_half_rzup = V3c::from(model.size).transformed(orientation) / 2;
             let model_bottom_left_rzup = *position_rzup - model_size_half_rzup - min_position_rzup
                 // If the index delta is negative(because of orientation),

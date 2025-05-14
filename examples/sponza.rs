@@ -58,6 +58,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
     if std::path::Path::new(tree_path).exists() {
         tree = BoxTree::load(&tree_path).ok().unwrap();
     } else {
+        println!("Loading sponza.vox");
         tree = match voxelhex::boxtree::BoxTree::load_vox_file(
             "assets/models/sponza.vox",
             BRICK_DIMENSION,
@@ -65,6 +66,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
             Ok(tree_) => tree_,
             Err(message) => panic!("Parsing model file failed with message: {message}"),
         };
+        println!("Loaded sponza.vox");
         tree.albedo_mip_map_resampling_strategy()
             .switch_albedo_mip_maps(true);
         tree.save(&tree_path).ok().unwrap();
