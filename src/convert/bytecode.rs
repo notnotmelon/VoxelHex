@@ -2,7 +2,7 @@ use crate::boxtree::types::PaletteIndexValues;
 use crate::boxtree::BOX_NODE_CHILDREN_COUNT;
 use crate::boxtree::{
     types::{BrickData, VoxelChildren, VoxelContent},
-    Color, BoxTree,
+    Color, Contree,
 };
 use crate::object_pool::ObjectPool;
 use bendy::{
@@ -97,10 +97,7 @@ impl FromBencode for Color {
 //  ░███    ███  ░███    ░███     ░███     ░███    ░███
 //  ██████████   █████   █████    █████    █████   █████
 //####################################################################################
-impl<T> ToBencode for BrickData<T>
-where
-    T: ToBencode + Default + Clone + PartialEq,
-{
+impl ToBencode for BrickData {
     const MAX_DEPTH: usize = 3;
 
     fn encode(&self, encoder: SingleItemEncoder) -> Result<(), BencodeError> {
@@ -123,10 +120,7 @@ where
     }
 }
 
-impl<T> FromBencode for BrickData<T>
-where
-    T: FromBencode + Clone + PartialEq,
-{
+impl FromBencode for BrickData {
     fn decode_bencode_object(data: Object) -> Result<Self, bendy::decoding::Error> {
         match data {
             Object::Bytes(b) => {
@@ -159,7 +153,7 @@ where
                     )),
                 }?;
                 if is_solid {
-                    Ok(BrickData::Solid(T::decode_bencode_object(
+                    Ok(BrickData::Solid(PaletteIndexValues::decode_bencode_object(
                         list.next_object()?.unwrap(),
                     )?))
                 } else {
@@ -173,7 +167,7 @@ where
                     debug_assert!(0 < len, "Expected brick to be of non-zero length!");
                     let mut brick_data = Vec::with_capacity(len as usize);
                     for _ in 0..len {
-                        brick_data.push(T::decode_bencode_object(list.next_object()?.unwrap())?);
+                        brick_data.push(PaletteIndexValues::decode_bencode_object(list.next_object()?.unwrap())?);
                     }
                     Ok(BrickData::Parted(brick_data))
                 }
@@ -278,7 +272,7 @@ impl FromBencode for VoxelContent {
                 }
 
                 if is_leaf && !is_uniform {
-                    let leaf_data: [BrickData<PaletteIndexValues>; BOX_NODE_CHILDREN_COUNT] = (0
+                    let leaf_data: [BrickData; BOX_NODE_CHILDREN_COUNT] = (0
                         ..BOX_NODE_CHILDREN_COUNT)
                         .map(|_sectant| {
                             BrickData::decode_bencode_object(
@@ -410,7 +404,7 @@ impl FromBencode for VoxelChildren {
 //  ░░░███████░   ░░█████████     █████    █████   █████ ██████████ ██████████
 //    ░░░░░░░      ░░░░░░░░░     ░░░░░    ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░░░░░░
 //####################################################################################
-impl<T> ToBencode for BoxTree<T>
+impl<T> ToBencode for Contree<T>
 where
     T: ToBencode + Default + Clone + Eq + Hash,
 {
@@ -418,7 +412,7 @@ where
     fn encode(&self, encoder: SingleItemEncoder) -> Result<(), BencodeError> {
         encoder.emit_list(|e| {
             e.emit_int(self.auto_simplify as u8)?;
-            e.emit_int(self.boxtree_size)?;
+            e.emit_int(self.contree_size)?;
             e.emit_int(self.brick_dim)?;
             e.emit(&self.nodes)?;
             e.emit(&self.node_children)?;
@@ -429,7 +423,7 @@ where
     }
 }
 
-impl<T> FromBencode for BoxTree<T>
+impl<T> FromBencode for Contree<T>
 where
     T: FromBencode + Default + Clone + Eq + Hash,
 {
@@ -484,7 +478,7 @@ where
 
                 Ok(Self {
                     auto_simplify,
-                    boxtree_size,
+                    contree_size: boxtree_size,
                     brick_dim,
                     nodes,
                     node_children,

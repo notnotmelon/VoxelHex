@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         types::{BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
-        BoxTree, BoxTreeEntry, V3c, VoxelData, BOX_NODE_DIMENSION, OOB_SECTANT,
+        Contree, BoxTreeEntry, V3c, VoxelData, BOX_NODE_DIMENSION, OOB_SECTANT,
     },
     spatial::{
         lut::RAY_TO_NODE_OCCUPANCY_BITMASK_LUT,
@@ -94,7 +94,7 @@ impl<
         #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    > BoxTree<T>
+    > Contree<T>
 {
     pub(crate) fn get_dda_scale_factors(ray: &Ray) -> V3c<f32> {
         V3c::new(
@@ -257,7 +257,7 @@ impl<
         &self,
         ray: &Ray,
         ray_current_point: &mut V3c<f32>,
-        brick: &BrickData<PaletteIndexValues>,
+        brick: &BrickData,
         brick_bounds: &Cube,
         ray_scale_factors: &V3c<f32>,
     ) -> Option<(BoxTreeEntry<T>, V3c<f32>, V3c<f32>)> {
@@ -331,7 +331,7 @@ impl<
         let direction_lut_index = hash_direction(&ray.direction) as usize;
 
         let mut node_stack: NodeStack<u32> = NodeStack::default();
-        let mut current_bounds = Cube::root_bounds(self.boxtree_size as f32);
+        let mut current_bounds = Cube::root_bounds(self.contree_size as f32);
         let (mut ray_current_point, mut target_sectant, mut target_bounds) =
             if let Some(root_hit) = current_bounds.intersect_ray(ray) {
                 let ray_current_point = ray.point_at(root_hit.impact_distance.unwrap_or(0.));
@@ -348,7 +348,7 @@ impl<
 
         while target_sectant != OOB_SECTANT {
             current_node_key = Self::ROOT_NODE_KEY as usize;
-            current_bounds = Cube::root_bounds(self.boxtree_size as f32);
+            current_bounds = Cube::root_bounds(self.contree_size as f32);
             node_stack.push(Self::ROOT_NODE_KEY);
             while !node_stack.is_empty() {
                 let current_node_occupied_bits =
@@ -483,14 +483,14 @@ impl<
             // To avoid precision problems the current point center is pushed forward slightly within
             // a voxel of size 1
             ray_current_point += ray.direction * 0.1;
-            target_sectant = if ray_current_point.x < self.boxtree_size as f32
-                && ray_current_point.y < self.boxtree_size as f32
-                && ray_current_point.z < self.boxtree_size as f32
+            target_sectant = if ray_current_point.x < self.contree_size as f32
+                && ray_current_point.y < self.contree_size as f32
+                && ray_current_point.z < self.contree_size as f32
                 && ray_current_point.x > 0.
                 && ray_current_point.y > 0.
                 && ray_current_point.z > 0.
             {
-                offset_sectant(&ray_current_point, self.boxtree_size as f32)
+                offset_sectant(&ray_current_point, self.contree_size as f32)
             } else {
                 OOB_SECTANT
             };

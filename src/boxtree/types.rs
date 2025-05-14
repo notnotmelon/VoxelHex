@@ -37,18 +37,15 @@ pub enum BoxTreeEntry<'a, T: VoxelData> {
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum BrickData<T>
-where
-    T: Clone + PartialEq + Clone,
-{
+pub(crate) enum BrickData {
     /// Brick is empty
     Empty,
 
     /// Brick is an NxNxN matrix, size is determined by the parent entity
-    Parted(Vec<T>),
+    Parted(Vec<PaletteIndexValues>),
 
     /// Brick is a single item T, which takes up the entirety of the brick
-    Solid(T),
+    Solid(PaletteIndexValues),
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -63,10 +60,10 @@ pub(crate) enum VoxelContent
     Internal(u64),
 
     /// Node contains 64 children, each with their own brickdata
-    Leaf([BrickData<PaletteIndexValues>; BOX_NODE_CHILDREN_COUNT]),
+    Leaf([BrickData; BOX_NODE_CHILDREN_COUNT]),
 
     /// Node has one child, which takes up the entirety of the node with its brick data
-    UniformLeaf(BrickData<PaletteIndexValues>),
+    UniformLeaf(BrickData),
 }
 
 #[derive(Default, Copy, Clone, PartialEq, Eq)]
@@ -102,7 +99,7 @@ pub(crate) type PaletteIndexValues = u32;
 /// tree-graph where each node has 64 children.
 #[cfg_attr(feature = "serialization", derive(Serialize))]
 #[derive(Clone)]
-pub struct BoxTree<T = u32>
+pub struct Contree<T = u32>
 where
     T: Default + Clone + Eq + Hash,
 {
@@ -110,7 +107,7 @@ where
     pub(crate) brick_dim: u32,
 
     /// Extent of the boxtree
-    pub(crate) boxtree_size: u32,
+    pub(crate) contree_size: u32,
 
     /// Storing data at each position through palette index values
     pub(crate) nodes: ObjectPool<VoxelContent>,

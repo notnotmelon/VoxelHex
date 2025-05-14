@@ -6,7 +6,7 @@ use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
-    boxtree::{BoxTree, V3c, V3cf32},
+    boxtree::{Contree, V3c, V3cf32},
     raytracing::{BoxTreeGPUHost, Ray, VhxViewSet, Viewport},
 };
 
@@ -50,13 +50,13 @@ fn main() {
 #[cfg(feature = "bevy_wgpu")]
 fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
     std::env::set_var("RUST_BACKTRACE", "1");
-    let tree: BoxTree;
+    let tree: Contree;
     let tree_path = "example_junk_minecraft";
     if std::path::Path::new(tree_path).exists() {
-        tree = BoxTree::load(&tree_path).ok().unwrap();
+        tree = Contree::load(&tree_path).ok().unwrap();
     } else {
         println!("Loading minecraft.vox");
-        tree = match voxelhex::boxtree::BoxTree::load_vox_file(
+        tree = match voxelhex::boxtree::Contree::load_vox_file(
             "assets/models/minecraft.vox",
             BRICK_DIMENSION,
         ) {

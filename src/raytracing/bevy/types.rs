@@ -1,4 +1,4 @@
-use crate::boxtree::{types::PaletteIndexValues, BoxTree, V3cf32, VoxelData};
+use crate::boxtree::{types::PaletteIndexValues, Contree, V3cf32, VoxelData};
 use bevy::{
     asset::Handle,
     ecs::system::Resource,
@@ -83,7 +83,7 @@ pub struct BoxTreeGPUHost<T = u32>
 where
     T: Default + Clone + Eq + VoxelData + Send + Sync + Hash + 'static,
 {
-    pub tree: BoxTree<T>,
+    pub tree: Contree<T>,
 }
 
 #[derive(Default, Resource, Clone, TypePath, ExtractResource)]

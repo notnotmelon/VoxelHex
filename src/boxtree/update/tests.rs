@@ -1,5 +1,5 @@
 use crate::{
-    boxtree::{Color, BoxTree, BoxTreeEntry, BOX_NODE_CHILDREN_COUNT},
+    boxtree::{Color, Contree, BoxTreeEntry, BOX_NODE_CHILDREN_COUNT},
     spatial::{lut::SECTANT_OFFSET_LUT, math::vector::V3c},
     voxel_data,
 };
@@ -8,7 +8,7 @@ use num_traits::Zero;
 #[test]
 fn test_simplest_insert_and_get() {
     let red: Color = 0xFF000001.into();
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(0, 0, 0), &red)
         .expect("boxtree insert");
@@ -22,7 +22,7 @@ fn test_simple_insert_and_get_where_dim_is_1() {
     let green: Color = 0x00FF00FF.into();
     let blue: Color = 0x0000FFFF.into();
 
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(1, 0, 0), &red)
         .expect("insert to work");
@@ -47,7 +47,7 @@ fn test_simple_insert_and_get_where_dim_is_1() {
 
 #[test]
 fn test_insert_empty() {
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(0, 0, 0), BoxTreeEntry::Empty).ok();
     assert!(tree.get(&V3c::new(0, 0, 0)) == BoxTreeEntry::Empty);
@@ -58,7 +58,7 @@ fn test_complex_insert_and_get() {
     let red: Color = 0xFF0000FF.into();
     let green: Color = 0x00FF00FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(1, 0, 0), (&red, &3))
         .expect("insert to work");
@@ -115,7 +115,7 @@ fn test_simple_insert_and_get_where_dim_is_2() {
     let green: Color = 0x00FF00FF.into();
     let blue: Color = 0x0000FFFF.into();
 
-    let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(8, 2).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(1, 0, 0), &red).ok().unwrap();
     tree.insert(&V3c::new(0, 1, 0), &green).ok().unwrap();
@@ -144,7 +144,7 @@ fn test_insert_at_lod_where_dim_is_1() {
     let red: Color = 0xFF0000FF.into();
     let green: Color = 0x00FF00FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
     tree.auto_simplify = false;
 
     // This will set the area equal to 8 1-sized nodes
@@ -195,7 +195,7 @@ fn test_insert_at_lod_where_dim_is_2() {
     let red: Color = 0xFF0000FF.into();
     let green: Color = 0x00FF00FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(8, 2).ok().unwrap();
     tree.auto_simplify = false;
 
     // This will set the area equal to 8 1-sized nodes
@@ -246,7 +246,7 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_1() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 1;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     for x in 0..tree_size {
         for y in 0..tree_size {
@@ -280,7 +280,7 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_2() {
     let tree_size = 8;
     const MATRIX_DIMENSION: u32 = 2;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     for x in 0..tree_size {
         for y in 0..tree_size {
@@ -327,7 +327,7 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     for x in 0..tree_size {
         for y in 0..tree_size {
@@ -359,7 +359,7 @@ fn test_case_simplified_insert_separated_by_clear_where_dim_is_4() {
 fn test_update_color() {
     let red: Color = 0xFF0000FF.into();
     let green: Color = 0x00FF00FF.into();
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert(&V3c::new(0, 0, 0), (&red, &3)).ok();
@@ -373,7 +373,7 @@ fn test_update_color() {
 #[test]
 fn test_update_data() {
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert(&V3c::new(0, 0, 0), (&red, &3)).ok();
@@ -388,7 +388,7 @@ fn test_update_data() {
 #[test]
 fn test_update_empty() {
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert(&V3c::new(0, 0, 0), (&red, &3)).ok();
@@ -402,7 +402,7 @@ fn test_update_empty() {
 fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_1() {
     let tree_size = 4;
     const MATRIX_DIMENSION: u32 = 1;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant of the leaf with the same data, it should become a uniform leaf
     let color_base_original: Color = 0xFFFF00FF.into();
@@ -438,7 +438,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_1() {
 fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_1() {
     let tree_size = 4;
     const MATRIX_DIMENSION: u32 = 1;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant of the leaf with the same data, it should become a uniform leaf
     let color_base_original: Color = 0xFFFF00FF.into();
@@ -469,7 +469,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_1() {
 fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant with the same data, they should become a solid bricks
     let color_base = 0xFFFF00AA;
@@ -516,7 +516,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_4() {
 fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant with the same data, they should become a solid bricks
     let color_base = 0xFFFF00AA;
@@ -567,7 +567,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
 fn test_uniform_parted_brick_leaf_separated_by_clear_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant with the same data
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
@@ -636,7 +636,7 @@ fn test_uniform_parted_brick_leaf_separated_by_clear_where_dim_is_4() {
 fn test_simple_uniform_parted_brick_leaf_overwrites_separated_by_insert_where_dim_is_2() {
     let tree_size = 8;
     const MATRIX_DIMENSION: u32 = 2;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant inside the brick with the same data
     let color_base_original = 0xF00000FF;
@@ -664,7 +664,7 @@ fn test_simple_uniform_parted_brick_leaf_overwrites_separated_by_insert_where_di
 fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_2() {
     let tree_size = 8;
     const MATRIX_DIMENSION: u32 = 2;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant with the same data
     let color_base_original = 0xF00000FF;
@@ -715,7 +715,7 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_2() {
 fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
     // Fill each sectant with the same data
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
@@ -792,7 +792,7 @@ fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
 fn test_insert_at_lod_with_unaligned_position_where_dim_is_4() {
     let red: Color = 0xFF0000FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert_at_lod(&V3c::new(1, 1, 1), 4, &red)
@@ -832,7 +832,7 @@ fn test_insert_at_lod_with_unaligned_position_where_dim_is_4() {
 fn test_insert_at_lod_with_unaligned_size_where_dim_is_1() {
     let red: Color = 0xFF0000FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert_at_lod(&V3c::new(2, 2, 2), 3, &red)
@@ -864,7 +864,7 @@ fn test_insert_at_lod_with_unaligned_size_where_dim_is_1() {
 fn test_insert_at_lod_with_unaligned_size_and_position_where_dim_is_1() {
     let red: Color = 0xFF0000FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert_at_lod(&V3c::new(3, 3, 3), 3, &red)
@@ -897,7 +897,7 @@ fn test_insert_at_lod_with_unaligned_size_and_position_where_dim_is_1() {
 fn test_insert_at_lod_with_unaligned_size_where_dim_is_4() {
     let red: Color = 0xFF0000FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert_at_lod(&V3c::new(1, 1, 1), 3, &red)
@@ -931,7 +931,7 @@ fn test_insert_at_lod_with_simplify() {
     let red: Color = 0xFF0000FF.into();
     let green: Color = 0x00FF00FF.into();
 
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 8 1-sized nodes
     tree.insert_at_lod(&V3c::new(4, 0, 0), 2, &red)
@@ -988,7 +988,7 @@ fn test_simplifyable_insert_and_get_where_dim_is_1() {
     let green: Color = 0x00FF00FF.into();
 
     const SIZE: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(SIZE, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(SIZE, 1).ok().unwrap();
 
     // The below set of values should be simplified to a single node
     for x in 0..SIZE {
@@ -1019,7 +1019,7 @@ fn test_simplifyable_insert_and_get_where_dim_is_2() {
     let green: Color = 0x00FF00FF.into();
 
     const SIZE: u32 = 8;
-    let mut tree: BoxTree = BoxTree::new(SIZE, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(SIZE, 2).ok().unwrap();
 
     // The below set of values should be simplified to a single node
     for x in 0..SIZE {
@@ -1050,7 +1050,7 @@ fn test_simple_clear_where_dim_is_1() {
     let green: Color = 0x00FF00FF.into();
     let blue: Color = 0x0000FFFF.into();
 
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(1, 0, 0), &red).ok().unwrap();
     tree.insert(&V3c::new(0, 1, 0), &green).ok().unwrap();
@@ -1069,7 +1069,7 @@ fn test_simple_clear_where_dim_is_2() {
     let green: Color = 0x00FF00FF.into();
     let blue: Color = 0x0000FFFF.into();
 
-    let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(8, 2).ok().unwrap();
     tree.auto_simplify = false;
 
     tree.insert(&V3c::new(1, 0, 0), &red).ok().unwrap();
@@ -1095,7 +1095,7 @@ fn test_clear_small_part_of_large_node_ocbits_resolution_test() {
     const TREE_SIZE: u32 = 128;
     const BRICK_DIMENSION: u32 = 8;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert(&V3c::new(0, 1, 1), &red).ok().unwrap();
     tree.insert(&V3c::new(1, 0, 0), &red).ok().unwrap();
@@ -1112,7 +1112,7 @@ fn test_set_small_part_of_large_node_ocbits_resolution_test_underflow() {
     const TREE_SIZE: u32 = 128;
     const BRICK_DIMENSION: u32 = 8;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert_at_lod(&V3c::new(33, 33, 33), 2, &red)
         .ok()
@@ -1129,7 +1129,7 @@ fn test_set_small_part_of_large_node_ocbits_resolution_test_overflow() {
     const TREE_SIZE: u32 = 128;
     const BRICK_DIMENSION: u32 = 8;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert(&V3c::new(31, 31, 31), &red).ok().unwrap();
 
@@ -1143,7 +1143,7 @@ fn test_set_small_part_of_large_node_ocbits_resolution_test_overflow() {
 fn test_double_clear() {
     let albedo_black: Color = 0x000000FF.into();
     let albedo_white: Color = 0xFFFFFFFF.into();
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.auto_simplify = false;
     tree.insert(&V3c::new(1, 0, 0), &albedo_black).ok().unwrap();
     tree.insert(&V3c::new(0, 1, 0), &albedo_white).ok().unwrap();
@@ -1161,7 +1161,7 @@ fn test_double_clear() {
 fn test_simplifyable_clear() {
     let albedo: Color = 0xFFAAEEFF.into();
     const SIZE: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(SIZE, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(SIZE, 1).ok().unwrap();
 
     // The below set of values should be simplified to a single node
     for x in 0..SIZE {
@@ -1191,7 +1191,7 @@ fn test_simplifyable_clear() {
 fn test_simplifyable_clear_where_dim_is_2() {
     let albedo: Color = 0xFFAAEEFF.into();
     const SIZE: u32 = 8;
-    let mut tree: BoxTree = BoxTree::new(SIZE, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(SIZE, 2).ok().unwrap();
 
     // The below set of values should be simplified to a single node
     for x in 0..SIZE {
@@ -1221,7 +1221,7 @@ fn test_simplifyable_clear_where_dim_is_2() {
 fn test_clear_to_nothing() {
     let albedo: Color = 0xFFAAEEFF.into();
     let entry = BoxTreeEntry::Visual(&albedo);
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
 
     // The below set of values should be simplified to a single node
     tree.insert(&V3c::new(0, 0, 0), entry).ok().unwrap();
@@ -1253,7 +1253,7 @@ fn test_clear_edge_case() {
     const TREE_SIZE: u32 = 64;
     const BRICK_DIMENSION: u32 = 16;
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.update(&V3c::new(1, 0, 0), voxel_data!(&0xFACEFEED))
         .ok()
@@ -1303,7 +1303,7 @@ fn test_clear_edge_case() {
 #[test]
 fn test_clear_at_lod_where_dim_is_1() {
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
@@ -1340,7 +1340,7 @@ fn test_clear_at_lod_where_dim_is_1() {
 fn test_clear_at_lod_where_dim_is_2() {
     std::env::set_var("RUST_BACKTRACE", "1");
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(8, 2).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
@@ -1398,7 +1398,7 @@ fn test_clear_at_lod_where_dim_is_2() {
 #[test]
 fn test_clear_at_lod_with_unaligned_position_where_dim_is_1() {
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
@@ -1453,7 +1453,7 @@ fn test_clear_at_lod_with_unaligned_position_where_dim_is_1() {
 #[test]
 fn test_clear_at_lod_with_unaligned_position_where_dim_is_4() {
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
 
     tree.insert_at_lod(&V3c::new(0, 0, 0), 8, &albedo)
         .ok()
@@ -1507,7 +1507,7 @@ fn test_clear_at_lod_with_unaligned_position_where_dim_is_4() {
 #[test]
 fn test_clear_at_lod_with_unaligned_size_where_dim_is_1() {
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
         .ok()
         .unwrap();
@@ -1562,7 +1562,7 @@ fn test_clear_at_lod_with_unaligned_size_where_dim_is_1() {
 #[test]
 fn test_clear_at_lod_with_unaligned_size_where_dim_is_4() {
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &albedo)
         .ok()
         .unwrap();
@@ -1613,7 +1613,7 @@ fn test_clear_at_lod_with_unaligned_size_where_dim_is_4() {
 #[test]
 fn test_clear_whole_nodes_where_dim_is_4() {
     let albedo: Color = 0xFFAAEEFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 8, &albedo)
         .ok()
         .unwrap();
@@ -1665,7 +1665,7 @@ fn test_clear_whole_nodes_where_dim_is_4() {
 fn test_overwrite_whole_nodes_where_dim_is_4() {
     let red: Color = 0xFF0000FF.into();
     let blue: Color = 0x0000FFFF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 4).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
     tree.insert_at_lod(&V3c::new(0, 0, 0), 8, &red)
         .ok()
         .unwrap();
@@ -1722,7 +1722,7 @@ fn test_overwrite_whole_nodes_where_dim_is_4() {
 fn test_edge_case_boxtree_set() {
     const TREE_SIZE: u32 = 16;
     const FILL_RANGE_START: u32 = 6;
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
     for x in FILL_RANGE_START..TREE_SIZE {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
@@ -1736,7 +1736,7 @@ fn test_edge_case_boxtree_set() {
 
 #[test]
 fn test_case_inserting_empty() {
-    let mut tree: BoxTree = BoxTree::new(4, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
     tree.insert(&V3c::new(3, 0, 0), &Color::zero())
         .ok()
         .unwrap();

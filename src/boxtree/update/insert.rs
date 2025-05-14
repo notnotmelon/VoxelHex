@@ -2,7 +2,7 @@ use crate::{
     boxtree::{
         detail::child_sectant_for,
         types::{BoxTreeEntry, BrickData, VoxelChildren, VoxelContent, ContreeError},
-        BoxTree, VoxelData, BOX_NODE_DIMENSION,
+        Contree, VoxelData, BOX_NODE_DIMENSION,
     },
     spatial::{
         math::{flat_projection, matrix_index_for, vector::V3c},
@@ -30,7 +30,7 @@ impl<
         #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    > BoxTree<T>
+    > Contree<T>
 {
     //####################################################################################
     //  █████ ██████   █████  █████████  ██████████ ███████████   ███████████
@@ -105,7 +105,7 @@ impl<
         insert_size: u32,
         data: BoxTreeEntry<T>,
     ) -> Result<(), ContreeError> {
-        let root_bounds = Cube::root_bounds(self.boxtree_size as f32);
+        let root_bounds = Cube::root_bounds(self.contree_size as f32);
         let position = V3c::<f32>::from(*position_u32);
         if !root_bounds.contains(&position) {
             return Err(ContreeError::InvalidPosition {

@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         types::{ContreeError},
-        Color, BoxTree, BoxTreeEntry, V3c, VoxelData,
+        Color, Contree, BoxTreeEntry, V3c, VoxelData,
     },
     spatial::math::{convert_coordinate, CoordinateSystemType},
 };
@@ -214,7 +214,7 @@ impl<
         #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    > BoxTree<T>
+    > Contree<T>
 {
     pub fn load_vox_file(filename: &str, brick_dimension: u32) -> Result<Self, &'static str> {
         let (vox_data, min_position, mut max_position) = Self::load_vox_file_internal(filename);
@@ -226,7 +226,7 @@ impl<
         let tree_size = 4_u32.pow(tree_size) * brick_dimension;
 
         let mut shocovox_boxtree =
-            BoxTree::<T>::new(tree_size, brick_dimension).unwrap_or_else(|err| {
+            Contree::<T>::new(tree_size, brick_dimension).unwrap_or_else(|err| {
                 panic!(
                     "Expected to build a valid boxtree with dimension {:?} and brick dimension {:?}; Instead: {:?}",
                     tree_size,

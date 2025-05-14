@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         types::{BrickData, VoxelContent, PaletteIndexValues},
-        BoxTree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT,
+        Contree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
     raytracing::bevy::{
@@ -48,7 +48,7 @@ fn boxtree_properties<
     #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
     #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
 >(
-    tree: &BoxTree<T>,
+    tree: &Contree<T>,
 ) -> u32 {
     tree.brick_dim & 0x0000FFFF
 }
@@ -118,13 +118,13 @@ impl<
         let gpu_data_handler = BoxTreeGPUDataHandler {
             render_data: BoxTreeRenderData {
                 boxtree_meta: BoxTreeMetaData {
-                    boxtree_size: self.tree.boxtree_size,
+                    boxtree_size: self.tree.contree_size,
                     tree_properties: boxtree_properties(&self.tree),
                     ambient_light_color: V3c::new(1., 1., 1.),
                     ambient_light_position: V3c::new(
-                        self.tree.boxtree_size as f32,
-                        self.tree.boxtree_size as f32,
-                        self.tree.boxtree_size as f32,
+                        self.tree.contree_size as f32,
+                        self.tree.contree_size as f32,
+                        self.tree.contree_size as f32,
                     ),
                 },
                 used_bits: vec![0; nodes_in_view],
@@ -389,7 +389,7 @@ pub(crate) fn write_to_gpu<
             if let Some(resources) = &vhx_view_set.resources[0] {
                 // write data for root node
                 view.data_handler
-                    .add_node(&tree_host.tree, BoxTree::<T>::ROOT_NODE_KEY as usize);
+                    .add_node(&tree_host.tree, Contree::<T>::ROOT_NODE_KEY as usize);
 
                 // Set some well recognizable init value
                 view.data_handler.render_data.used_bits[0] = 0xBEEF;

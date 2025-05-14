@@ -8,7 +8,7 @@ use crate::{
     boxtree::{
         child_sectant_for,
         types::{BoxTreeEntry, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
-        Color, BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
+        Color, Contree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
     spatial::{
@@ -38,7 +38,7 @@ impl<
         #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    > BoxTree<T>
+    > Contree<T>
 {
     //####################################################################################
     // ███████████    █████████   █████       ██████████ ███████████ ███████████ ██████████
@@ -175,7 +175,7 @@ impl<
         match self.nodes.get_mut(node_key) {
             VoxelContent::Leaf(bricks) => {
                 // In case brick_dimension == boxtree size, the 0 can not be a leaf...
-                debug_assert!(self.brick_dim < self.boxtree_size);
+                debug_assert!(self.brick_dim < self.contree_size);
                 match &mut bricks[target_child_sectant] {
                     //If there is no brick in the target position of the leaf, create one
                     BrickData::Empty => {
@@ -260,7 +260,7 @@ impl<
                             &self.voxel_color_palette,
                             &self.voxel_data_palette,
                         ) {
-                            let mut new_leaf_content: [BrickData<PaletteIndexValues>;
+                            let mut new_leaf_content: [BrickData;
                                 BOX_NODE_CHILDREN_COUNT] =
                                 vec![BrickData::Empty; BOX_NODE_CHILDREN_COUNT]
                                     .try_into()
@@ -410,7 +410,7 @@ impl<
 
                         // the data at the position inside the brick doesn't match the given data,
                         // so the leaf needs to be divided into a NodeContent::Leaf(bricks)
-                        let mut leaf_data: [BrickData<PaletteIndexValues>;
+                        let mut leaf_data: [BrickData;
                             BOX_NODE_CHILDREN_COUNT] =
                             vec![BrickData::Empty; BOX_NODE_CHILDREN_COUNT]
                                 .try_into()

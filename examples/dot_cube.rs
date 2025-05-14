@@ -13,7 +13,7 @@ use iyes_perf_ui::{
 
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
-    boxtree::{Color, BoxTree, BoxTreeEntry, V3c, V3cf32},
+    boxtree::{Contree, BoxTreeEntry, V3c, V3cf32},
     raytracing::{BoxTreeGPUHost, Ray, VhxViewSet, Viewport},
 };
 
@@ -52,7 +52,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
     );
 
     // fill boxtree with data
-    let mut tree: BoxTree = voxelhex::boxtree::BoxTree::new(TREE_SIZE, BRICK_DIMENSION)
+    let mut tree: Contree = voxelhex::boxtree::Contree::new(TREE_SIZE, BRICK_DIMENSION)
         .ok()
         .unwrap();
 

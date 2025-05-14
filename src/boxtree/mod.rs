@@ -6,7 +6,7 @@ mod node;
 
 pub use crate::spatial::math::vector::{V3c, V3cf32};
 pub use types::{
-    Color, BoxTree, BoxTreeEntry, VoxelData,
+    Color, Contree, BoxTreeEntry, VoxelData,
 };
 
 use crate::{
@@ -128,7 +128,7 @@ impl<
         #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    > BoxTree<T>
+    > Contree<T>
 {
     /// converts the data structure to a byte representation
     #[cfg(feature = "bytecode")]
@@ -188,7 +188,7 @@ impl<
         assert!(root_node_key == 0);
         Ok(Self {
             auto_simplify: true,
-            boxtree_size: size,
+            contree_size: size,
             brick_dim: brick_dimension,
             nodes,
             node_children: vec![VoxelChildren::default()],
@@ -205,7 +205,7 @@ impl<
         VoxelContent::pix_get_ref(
             &self.get_internal(
                 Self::ROOT_NODE_KEY as usize,
-                Cube::root_bounds(self.boxtree_size as f32),
+                Cube::root_bounds(self.contree_size as f32),
                 position,
             ),
             &self.voxel_color_palette,
@@ -231,7 +231,7 @@ impl<
                 VoxelContent::Nothing => return empty_marker(),
                 VoxelContent::Leaf(bricks) => {
                     // In case brick_dimension == boxtree size, the root node can not be a leaf...
-                    debug_assert!(self.brick_dim < self.boxtree_size);
+                    debug_assert!(self.brick_dim < self.contree_size);
 
                     // Hash the position to the target child
                     let child_sectant_at_position = child_sectant_for(&current_bounds, &position);
@@ -321,6 +321,6 @@ impl<
 
     /// Tells the radius of the area covered by the boxtree
     pub fn get_size(&self) -> u32 {
-        self.boxtree_size
+        self.contree_size
     }
 }

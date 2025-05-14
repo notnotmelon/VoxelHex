@@ -98,7 +98,7 @@ impl VoxelChildren {
 //  ██████████   █████   █████    █████    █████   █████
 // ░░░░░░░░░░   ░░░░░   ░░░░░    ░░░░░    ░░░░░   ░░░░░
 //####################################################################################
-impl BrickData<PaletteIndexValues> {
+impl BrickData {
     /// Calculates the Occupancy bitmap for the given Voxel brick
     pub(crate) fn calculate_brick_occupied_bits<V: VoxelData>(
         brick: &[PaletteIndexValues],

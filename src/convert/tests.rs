@@ -1,25 +1,25 @@
 use crate::boxtree::{
     types::{Color, BrickData, VoxelChildren, VoxelContent},
-    BoxTree, BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
+    Contree, BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
 
 #[test]
 fn test_node_brickdata_serialization() {
-    let brick_data_empty = BrickData::<Color>::Empty;
-    let brick_data_solid = BrickData::<Color>::Solid(Color::default().with_red(50));
-    let brick_data_parted = BrickData::Parted(vec![Color::default(); 4 * 4 * 4]);
+    let brick_data_empty = BrickData::Empty;
+    let brick_data_solid = BrickData::Solid(3);
+    let brick_data_parted = BrickData::Parted(vec![4; 4 * 4 * 4]);
 
     let brick_data_empty_deserialized =
-        BrickData::<Color>::from_bencode(&brick_data_empty.to_bencode().ok().unwrap())
+        BrickData::from_bencode(&brick_data_empty.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
     let brick_data_solid_deserialized =
-        BrickData::<Color>::from_bencode(&brick_data_solid.to_bencode().ok().unwrap())
+        BrickData::from_bencode(&brick_data_solid.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
     let brick_data_parted_deserialized =
-        BrickData::<Color>::from_bencode(&brick_data_parted.to_bencode().ok().unwrap())
+        BrickData::from_bencode(&brick_data_parted.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
 
@@ -133,7 +133,7 @@ fn test_node_children_serialization() {
 #[test]
 fn test_boxtree_file_io() {
     let red: Color = 0xFF0000FF.into();
-    let mut tree: BoxTree = BoxTree::new(16, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
     tree.insert_at_lod(&V3c::new(0, 0, 0), 4, &red)
@@ -145,7 +145,7 @@ fn test_boxtree_file_io() {
 
     // save andd load into a new tree
     tree.save("test_junk_boxtree").ok().unwrap();
-    let tree_copy = BoxTree::load("test_junk_boxtree").ok().unwrap();
+    let tree_copy = Contree::load("test_junk_boxtree").ok().unwrap();
 
     let mut hits = 0;
     for x in 0..4 {
@@ -177,7 +177,7 @@ fn test_boxtree_file_io() {
 fn test_big_boxtree_serialize() {
     const TREE_SIZE: u32 = 256;
     const FILL_RANGE_START: u32 = 230;
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
     for x in FILL_RANGE_START..TREE_SIZE {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
@@ -200,7 +200,7 @@ fn test_big_boxtree_serialize() {
     }
 
     let serialized = tree.to_bytes();
-    let deserialized: BoxTree = BoxTree::from_bytes(serialized);
+    let deserialized: Contree = Contree::from_bytes(serialized);
 
     for x in FILL_RANGE_START..TREE_SIZE {
         for y in FILL_RANGE_START..TREE_SIZE {
@@ -221,11 +221,11 @@ fn test_big_boxtree_serialize() {
 fn test_small_boxtree_serialize_where_dim_is_1() {
     const TREE_SIZE: u32 = 4;
     let color: Color = 1.into();
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
     tree.insert(&V3c::new(0, 0, 0), &color).ok().unwrap();
 
     let serialized = tree.to_bytes();
-    let deserialized: BoxTree = BoxTree::from_bytes(serialized);
+    let deserialized: Contree = Contree::from_bytes(serialized);
     let item_at_000 = deserialized.get(&V3c::new(0, 0, 0));
     assert!(
         item_at_000 == (&color).into(),
@@ -237,7 +237,7 @@ fn test_small_boxtree_serialize_where_dim_is_1() {
 #[test]
 fn test_boxtree_serialize_where_dim_is_1() {
     const TREE_SIZE: u32 = 4;
-    let mut tree: BoxTree = BoxTree::new(TREE_SIZE, 1).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
     for x in 0..TREE_SIZE {
         for y in 0..TREE_SIZE {
             for z in 0..TREE_SIZE {
@@ -253,7 +253,7 @@ fn test_boxtree_serialize_where_dim_is_1() {
     }
 
     let serialized = tree.to_bytes();
-    let deserialized: BoxTree = BoxTree::from_bytes(serialized);
+    let deserialized: Contree = Contree::from_bytes(serialized);
 
     for x in 0..TREE_SIZE {
         for y in 0..TREE_SIZE {
@@ -270,7 +270,7 @@ fn test_boxtree_serialize_where_dim_is_1() {
 
 #[test]
 fn test_boxtree_serialize_where_dim_is_2() {
-    let mut tree: BoxTree = BoxTree::new(8, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(8, 2).ok().unwrap();
     for x in 0..4 {
         for y in 0..4 {
             for z in 0..4 {
@@ -286,7 +286,7 @@ fn test_boxtree_serialize_where_dim_is_2() {
     }
 
     let serialized = tree.to_bytes();
-    let deserialized: BoxTree = BoxTree::from_bytes(serialized);
+    let deserialized: Contree = Contree::from_bytes(serialized);
 
     for x in 0..4 {
         for y in 0..4 {
@@ -303,7 +303,7 @@ fn test_boxtree_serialize_where_dim_is_2() {
 
 #[test]
 fn test_big_boxtree_serialize_where_dim_is_2() {
-    let mut tree: BoxTree = BoxTree::new(128, 2).ok().unwrap();
+    let mut tree: Contree = Contree::new(128, 2).ok().unwrap();
     for x in 100..128 {
         for y in 100..128 {
             for z in 100..128 {
@@ -316,7 +316,7 @@ fn test_big_boxtree_serialize_where_dim_is_2() {
     }
 
     let serialized = tree.to_bytes();
-    let deserialized: BoxTree = BoxTree::from_bytes(serialized);
+    let deserialized: Contree = Contree::from_bytes(serialized);
 
     for x in 100..128 {
         for y in 100..128 {

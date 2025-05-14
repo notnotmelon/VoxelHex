@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{Color, BoxTree, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData},
+        types::{Color, Contree, VoxelChildren, VoxelContent, VoxelData},
         BrickData, Cube, V3c, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -142,7 +142,7 @@ impl Zero for Color {
 //  ░░░███████░   ░░█████████     █████    █████   █████ ██████████ ██████████
 //    ░░░░░░░      ░░░░░░░░░     ░░░░░    ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░░░░░░
 //####################################################################################
-impl<T> BoxTree<T>
+impl<T> Contree<T>
 where
     T: Default + Clone + Eq + Hash + VoxelData,
 {
@@ -163,7 +163,7 @@ impl<
         #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
-    > BoxTree<T>
+    > Contree<T>
 {
     /// Returns with true if Node is empty at the given target sectant
     pub(crate) fn node_empty_at(&self, node_key: usize, target_sectant: u8) -> bool {
@@ -395,7 +395,7 @@ impl<
     }
 
     /// Tries to create a brick from the given node if possible. WARNING: Data loss may occur
-    pub(crate) fn try_brick_from_node(&self, node_key: usize) -> BrickData<PaletteIndexValues> {
+    pub(crate) fn try_brick_from_node(&self, node_key: usize) -> BrickData {
         if !self.nodes.key_is_valid(node_key) {
             return BrickData::Empty;
         }

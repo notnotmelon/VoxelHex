@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         types::{BrickData, VoxelContent},
-        BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT,
+        Contree, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
     raytracing::bevy::types::{
@@ -176,7 +176,7 @@ impl BoxTreeGPUDataHandler {
     fn inject_node_properties<T>(
         meta_array: &mut [u32],
         node_index: usize,
-        tree: &BoxTree<T>,
+        tree: &Contree<T>,
         node_key: usize,
     ) where
         T: Default + Clone + Eq + VoxelData + Hash,
@@ -230,7 +230,7 @@ impl BoxTreeGPUDataHandler {
         &mut self,
         meta_index: usize,
         child_sectant: usize,
-        tree: &'a BoxTree<T>,
+        tree: &'a Contree<T>,
     ) -> (Vec<BrickUpdate<'a>>, Vec<usize>)
     where
         T: Default + Clone + Eq + VoxelData + Hash,
@@ -363,18 +363,18 @@ impl BoxTreeGPUDataHandler {
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
     >(
         &mut self,
-        tree: &'a BoxTree<T>,
+        tree: &'a Contree<T>,
         node_key: usize,
     ) -> (usize, CacheUpdatePackage<'a>) {
         debug_assert!(
             !self.node_key_vs_meta_index.contains_left(&node_key)
-                || BoxTree::<T>::ROOT_NODE_KEY == node_key as u32,
+                || Contree::<T>::ROOT_NODE_KEY == node_key as u32,
             "Trying to add already available node twice!"
         );
 
         // Determine the index in meta, overwrite a currently present node if needed
         let (node_element_index, robbed_parent, modified_usage_range) =
-            if BoxTree::<T>::ROOT_NODE_KEY == node_key as u32 {
+            if Contree::<T>::ROOT_NODE_KEY == node_key as u32 {
                 (0, None, 0..1)
             } else {
                 self.victim_node.first_available_node(&mut self.render_data)
@@ -528,7 +528,7 @@ impl BoxTreeGPUDataHandler {
     /// * `returns` - child descriptor, brick updates applied, nodes updated during insertion
     pub(crate) fn add_brick<'a, T>(
         &mut self,
-        tree: &'a BoxTree<T>,
+        tree: &'a Contree<T>,
         node_key: usize,
         target_sectant: u8,
     ) -> (usize, CacheUpdatePackage<'a>)
