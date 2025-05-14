@@ -1063,7 +1063,6 @@ var<storage, read> voxels: array<PaletteIndexValues>;
 @group(2) @binding(7)
 var<storage, read> color_palette: array<vec4f>;
 
-
 @compute @workgroup_size(8, 8, 1)
 fn update(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
@@ -1147,7 +1146,54 @@ fn update(
             rgb_result = (rgb_result + ray_result.albedo.rgb) / 2.;
         }
 
-        textureStore(output_texture, vec2u(invocation_id.xy), vec4f(rgb_result, 1.));
+        let ao = calculate_ao(invocation_id, stage_data.output_resolution);
+        textureStore(output_texture, vec2u(invocation_id.xy), vec4f(rgb_result * ao, 1.));
+    }
+}
+
+const SSAO_SAMPLE_COUNT: u32 = 8; // AO requires 8 samples in a circle to find the dark crevices.
+const SSAO_RADIUS = 150.; // Each AO sample will be 1/SSAO_RADIUS of a UV from the center sample.
+const SSAO_BIAS = 4.; // number of sampled points required before we start darkening the ray. without this factor we will get random dark areas on flat walls.
+const SSAO_KERNEL: array<vec2<f32>, SSAO_SAMPLE_COUNT> = array<vec2<f32>, SSAO_SAMPLE_COUNT>( // UV offsets for each of the 8 samples to determine AO
+    vec2<f32>( 1.0 / SSAO_RADIUS,  0.0 / SSAO_RADIUS),
+    vec2<f32>( 0.0 / SSAO_RADIUS,  1.0 / SSAO_RADIUS),
+    vec2<f32>(-1.0 / SSAO_RADIUS,  0.0 / SSAO_RADIUS),
+    vec2<f32>( 0.0 / SSAO_RADIUS, -1.0 / SSAO_RADIUS),
+    vec2<f32>( 0.7 / SSAO_RADIUS,  0.7 / SSAO_RADIUS),
+    vec2<f32>(-0.7 / SSAO_RADIUS,  0.7 / SSAO_RADIUS),
+    vec2<f32>(-0.7 / SSAO_RADIUS, -0.7 / SSAO_RADIUS),
+    vec2<f32>( 0.7 / SSAO_RADIUS, -0.7 / SSAO_RADIUS),
+);
+
+fn calculate_ao(invocation_id: vec3<u32>, output_resolution: vec2u) -> vec3f {
+    var occlusion: f32 = 0.;
+    let coord = vec2<u32>(invocation_id.xy);
+    let output_resolutionf = vec2f(output_resolution);
+    let uv = vec2<f32>(coord) / output_resolutionf;
+
+    if (uv.x > 0.5) { return vec3f(1., 1., 1.); }
+
+    let center_depth = textureLoad(depth_texture, vec2u(invocation_id.xy / 2)).x;
+    
+    for (var i: u32 = 0u; i < SSAO_SAMPLE_COUNT; i += 1u) {
+        let offset_uv = uv + SSAO_KERNEL[i];
+        let sample_coord = vec2u(offset_uv * output_resolutionf);
+        if (sample_coord.x < 0 || sample_coord.x >= output_resolution.x || sample_coord.y < 0 || sample_coord.y >= output_resolution.y) {
+            continue;
+        }
+
+        let sample_depth = textureLoad(depth_texture, vec2u(sample_coord.xy / 2)).x;
+        if (sample_depth < center_depth) {
+            occlusion += smoothstep(0.0, 1.0, center_depth - sample_depth);
+        }
+    }
+
+    occlusion -= SSAO_BIAS;
+    if (occlusion > 0) {
+        occlusion = pow(0.8, f32(occlusion));
+        return vec3f(occlusion, occlusion, occlusion);
+    } else {
+        return vec3f(1., 1., 1.);
     }
 }
 
