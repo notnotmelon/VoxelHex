@@ -1,6 +1,7 @@
+use crate::boxtree::types::PaletteIndexValues;
 use crate::boxtree::BOX_NODE_CHILDREN_COUNT;
 use crate::boxtree::{
-    types::{BrickData, NodeChildren, NodeContent},
+    types::{BrickData, VoxelChildren, VoxelContent},
     Albedo, BoxTree,
 };
 use crate::object_pool::ObjectPool;
@@ -8,7 +9,7 @@ use bendy::{
     decoding::{FromBencode, Object},
     encoding::{Error as BencodeError, SingleItemEncoder, ToBencode},
 };
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{collections::HashMap, hash::Hash};
 
 //####################################################################################
 //  █████   █████    ███████    █████ █████ ██████████ █████
@@ -204,26 +205,23 @@ where
 //  ░░█████████  ░░░███████░   █████  ░░█████    █████    ██████████ █████  ░░█████    █████
 //   ░░░░░░░░░     ░░░░░░░    ░░░░░    ░░░░░    ░░░░░    ░░░░░░░░░░ ░░░░░    ░░░░░    ░░░░░
 //####################################################################################
-impl<T> ToBencode for NodeContent<T>
-where
-    T: ToBencode + Debug + Default + Clone + PartialEq,
-{
+impl ToBencode for VoxelContent where {
     const MAX_DEPTH: usize = 8;
     fn encode(&self, encoder: SingleItemEncoder) -> Result<(), BencodeError> {
         match self {
-            NodeContent::Nothing => encoder.emit_str("#"),
-            NodeContent::Internal(occupied_bits) => encoder.emit_list(|e| {
+            VoxelContent::Nothing => encoder.emit_str("#"),
+            VoxelContent::Internal(occupied_bits) => encoder.emit_list(|e| {
                 e.emit_str("##")?;
                 e.emit_int(*occupied_bits)
             }),
-            NodeContent::Leaf(bricks) => encoder.emit_list(|e| {
+            VoxelContent::Leaf(bricks) => encoder.emit_list(|e| {
                 e.emit_str("###")?;
                 for brick in bricks.iter().take(BOX_NODE_CHILDREN_COUNT) {
                     e.emit(brick.clone())?;
                 }
                 Ok(())
             }),
-            NodeContent::UniformLeaf(brick) => encoder.emit_list(|e| {
+            VoxelContent::UniformLeaf(brick) => encoder.emit_list(|e| {
                 e.emit_str("##u#")?;
                 e.emit(brick.clone())
             }),
@@ -231,10 +229,7 @@ where
     }
 }
 
-impl<T> FromBencode for NodeContent<T>
-where
-    T: FromBencode + Debug + Clone + PartialEq,
-{
+impl FromBencode for VoxelContent {
     fn decode_bencode_object(data: Object) -> Result<Self, bendy::decoding::Error> {
         match data {
             Object::List(mut list) => {
@@ -279,11 +274,11 @@ where
                             ))
                         }
                     };
-                    return Ok(NodeContent::Internal(occupied_bits));
+                    return Ok(VoxelContent::Internal(occupied_bits));
                 }
 
                 if is_leaf && !is_uniform {
-                    let leaf_data: [BrickData<T>; BOX_NODE_CHILDREN_COUNT] = (0
+                    let leaf_data: [BrickData<PaletteIndexValues>; BOX_NODE_CHILDREN_COUNT] = (0
                         ..BOX_NODE_CHILDREN_COUNT)
                         .map(|_sectant| {
                             BrickData::decode_bencode_object(
@@ -297,11 +292,11 @@ where
                         .try_into()
                         .unwrap();
 
-                    return Ok(NodeContent::Leaf(leaf_data));
+                    return Ok(VoxelContent::Leaf(leaf_data));
                 }
 
                 if is_leaf && is_uniform {
-                    return Ok(NodeContent::UniformLeaf(BrickData::decode_bencode_object(
+                    return Ok(VoxelContent::UniformLeaf(BrickData::decode_bencode_object(
                         list.next_object()?.unwrap(),
                     )?));
                 }
@@ -311,7 +306,7 @@ where
             }
             Object::Bytes(b) => {
                 assert!(String::from_utf8(b.to_vec()).unwrap_or("".to_string()) == "#");
-                Ok(NodeContent::Nothing)
+                Ok(VoxelContent::Nothing)
             }
             _ => Err(bendy::decoding::Error::unexpected_token(
                 "A NodeContent Object, either a List or a ByteString",
@@ -342,19 +337,19 @@ where
 // using generic arguments means the default key needs to be serialzied along with the data, which means a lot of wasted space..
 // so serialization for the current ObjectPool key is adequate; The engineering hour cost of implementing new serialization logic
 // every time the ObjectPool::Itemkey type changes is acepted.
-impl ToBencode for NodeChildren<u32> {
+impl ToBencode for VoxelChildren {
     const MAX_DEPTH: usize = 2;
     fn encode(&self, encoder: SingleItemEncoder) -> Result<(), BencodeError> {
         match &self {
-            NodeChildren::Children(c) => encoder.emit_list(|e| {
+            VoxelChildren::Children(c) => encoder.emit_list(|e| {
                 e.emit_str("##c##")?;
                 for child in c.iter().take(BOX_NODE_CHILDREN_COUNT) {
                     e.emit(child)?;
                 }
                 Ok(())
             }),
-            NodeChildren::NoChildren => encoder.emit_str("##x##"),
-            NodeChildren::OccupancyBitmap(map) => encoder.emit_list(|e| {
+            VoxelChildren::NoChildren => encoder.emit_str("##x##"),
+            VoxelChildren::OccupancyBitmap(map) => encoder.emit_list(|e| {
                 e.emit_str("##b##")?;
                 e.emit(map)
             }),
@@ -362,7 +357,7 @@ impl ToBencode for NodeChildren<u32> {
     }
 }
 
-impl FromBencode for NodeChildren<u32> {
+impl FromBencode for VoxelChildren {
     fn decode_bencode_object(data: Object) -> Result<Self, bendy::decoding::Error> {
         match data {
             Object::List(mut list) => {
@@ -377,9 +372,9 @@ impl FromBencode for NodeChildren<u32> {
                                     .unwrap(),
                             );
                         }
-                        Ok(NodeChildren::Children(c.try_into().ok().unwrap()))
+                        Ok(VoxelChildren::Children(c.try_into().ok().unwrap()))
                     }
-                    "##b##" => Ok(NodeChildren::OccupancyBitmap(u64::decode_bencode_object(
+                    "##b##" => Ok(VoxelChildren::OccupancyBitmap(u64::decode_bencode_object(
                         list.next_object()?.unwrap(),
                     )?)),
                     s => Err(bendy::decoding::Error::unexpected_token(
@@ -395,7 +390,7 @@ impl FromBencode for NodeChildren<u32> {
                         .as_str(),
                     "##x##"
                 );
-                Ok(NodeChildren::default())
+                Ok(VoxelChildren::default())
             }
             _ => Err(bendy::decoding::Error::unexpected_token(
                 "A NodeChildren Object, Either a List or a ByteString",

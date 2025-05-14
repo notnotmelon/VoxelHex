@@ -1,5 +1,5 @@
 use crate::boxtree::{
-    types::{Albedo, BrickData, NodeChildren, NodeContent, PaletteIndexValues},
+    types::{Albedo, BrickData, VoxelChildren, VoxelContent},
     BoxTree, BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
@@ -30,39 +30,39 @@ fn test_node_brickdata_serialization() {
 
 #[test]
 fn test_nodecontent_serialization() {
-    let node_content_nothing = NodeContent::<PaletteIndexValues>::Nothing;
-    let node_content_internal = NodeContent::<PaletteIndexValues>::Internal(0xAB);
-    let node_content_leaf = NodeContent::<PaletteIndexValues>::Leaf(
+    let node_content_nothing = VoxelContent::Nothing;
+    let node_content_internal = VoxelContent::Internal(0xAB);
+    let node_content_leaf = VoxelContent::Leaf(
         (0..BOX_NODE_CHILDREN_COUNT)
             .map(|sectant| match sectant % 3 {
-                1 => BrickData::Solid(NodeContent::pix_complex(69, 420)),
-                2 => BrickData::Parted(vec![NodeContent::pix_visual(666)]),
+                1 => BrickData::Solid(VoxelContent::pix_complex(69, 420)),
+                2 => BrickData::Parted(vec![VoxelContent::pix_visual(666)]),
                 _ => BrickData::Empty,
             })
             .collect::<Vec<_>>()
             .try_into()
             .unwrap(),
     );
-    let node_content_uniform_leaf = NodeContent::<PaletteIndexValues>::UniformLeaf(
-        BrickData::Solid(NodeContent::pix_informal(42)),
+    let node_content_uniform_leaf = VoxelContent::UniformLeaf(
+        BrickData::Solid(VoxelContent::pix_informal(42)),
     );
 
-    let node_content_nothing_deserialized = NodeContent::<PaletteIndexValues>::from_bencode(
+    let node_content_nothing_deserialized = VoxelContent::from_bencode(
         &node_content_nothing.to_bencode().ok().unwrap(),
     )
     .ok()
     .unwrap();
-    let node_content_internal_deserialized = NodeContent::<PaletteIndexValues>::from_bencode(
+    let node_content_internal_deserialized = VoxelContent::from_bencode(
         &node_content_internal.to_bencode().ok().unwrap(),
     )
     .ok()
     .unwrap();
-    let node_content_leaf_deserialized = NodeContent::<PaletteIndexValues>::from_bencode(
+    let node_content_leaf_deserialized = VoxelContent::from_bencode(
         &node_content_leaf.to_bencode().ok().unwrap(),
     )
     .ok()
     .unwrap();
-    let node_content_uniform_leaf_deserialized = NodeContent::<PaletteIndexValues>::from_bencode(
+    let node_content_uniform_leaf_deserialized = VoxelContent::from_bencode(
         &node_content_uniform_leaf.to_bencode().ok().unwrap(),
     )
     .ok()
@@ -86,7 +86,7 @@ fn test_nodecontent_serialization() {
 
     // Node content internal has a special equality implementation, where there is no equality between internal nodes
     match (node_content_internal_deserialized, node_content_internal) {
-        (NodeContent::Internal(bits1), NodeContent::Internal(bits2)) => {
+        (VoxelContent::Internal(bits1), VoxelContent::Internal(bits2)) => {
             assert_eq!(bits1, bits2);
         }
         _ => {
@@ -100,28 +100,28 @@ fn test_nodecontent_serialization() {
 
 #[test]
 fn test_node_children_serialization() {
-    let node_children_empty = NodeChildren::default();
-    let node_children_filled = NodeChildren::Children([
+    let node_children_empty = VoxelChildren::default();
+    let node_children_filled = VoxelChildren::Children([
         1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6,
         7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4,
         5, 6, 7, 8,
     ]);
-    let node_children_bitmap = NodeChildren::OccupancyBitmap(666);
+    let node_children_bitmap = VoxelChildren::OccupancyBitmap(666);
 
     let serialized_node_children_empty = node_children_empty.to_bencode();
     let serialized_node_children_filled = node_children_filled.to_bencode();
     let serialized_node_children_bitmap = node_children_bitmap.to_bencode();
 
     let deserialized_node_children_empty =
-        NodeChildren::from_bencode(&serialized_node_children_empty.ok().unwrap())
+        VoxelChildren::from_bencode(&serialized_node_children_empty.ok().unwrap())
             .ok()
             .unwrap();
     let deserialized_node_children_filled =
-        NodeChildren::from_bencode(&serialized_node_children_filled.ok().unwrap())
+        VoxelChildren::from_bencode(&serialized_node_children_filled.ok().unwrap())
             .ok()
             .unwrap();
     let deserialized_node_children_bitmap =
-        NodeChildren::from_bencode(&serialized_node_children_bitmap.ok().unwrap())
+        VoxelChildren::from_bencode(&serialized_node_children_bitmap.ok().unwrap())
             .ok()
             .unwrap();
 

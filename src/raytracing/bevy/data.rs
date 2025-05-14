@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{BrickData, NodeContent, PaletteIndexValues},
+        types::{BrickData, VoxelContent, PaletteIndexValues},
         BoxTree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
@@ -518,8 +518,8 @@ pub(crate) fn write_to_gpu<
             let requester_child_offset =
                 requester_first_child_index + requested_child_sectant as usize;
             match tree.nodes.get(requested_parent_node_key) {
-                NodeContent::Nothing => {} // parent is empty, nothing to do
-                NodeContent::Internal(_) => {
+                VoxelContent::Nothing => {} // parent is empty, nothing to do
+                VoxelContent::Internal(_) => {
                     let requested_child_node_key = tree_host.tree.node_children
                         [requested_parent_node_key]
                         .child(requested_child_sectant);
@@ -568,7 +568,7 @@ pub(crate) fn write_to_gpu<
                     ocbits_updated.start = ocbits_updated.start.min(child_index * 2);
                     ocbits_updated.end = ocbits_updated.end.max(child_index * 2 + 2);
                 }
-                NodeContent::UniformLeaf(brick) => {
+                VoxelContent::UniformLeaf(brick) => {
                     // Only upload brick if it's a parted, not already available brick
                     if matches!(brick, BrickData::Parted(_))
                         && view.data_handler.render_data.node_children[requester_first_child_index]
@@ -591,7 +591,7 @@ pub(crate) fn write_to_gpu<
                         extend_brick_updates(&mut modified_bricks, cache_update.brick_updates);
                     }
                 }
-                NodeContent::Leaf(bricks) => {
+                VoxelContent::Leaf(bricks) => {
                     // Only upload brick if it's a parted, not already available brick
                     if matches!(
                         bricks[requested_child_sectant as usize],

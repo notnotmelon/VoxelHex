@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{Albedo, BoxTree, NodeChildren, NodeContent, PaletteIndexValues, VoxelData},
+        types::{Albedo, BoxTree, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData},
         BrickData, Cube, V3c, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -168,17 +168,17 @@ impl<
     /// Returns with true if Node is empty at the given target sectant
     pub(crate) fn node_empty_at(&self, node_key: usize, target_sectant: u8) -> bool {
         match self.nodes.get(node_key) {
-            NodeContent::Nothing => true,
-            NodeContent::Leaf(bricks) => match &bricks[target_sectant as usize] {
+            VoxelContent::Nothing => true,
+            VoxelContent::Leaf(bricks) => match &bricks[target_sectant as usize] {
                 BrickData::Empty => true,
-                BrickData::Solid(voxel) => NodeContent::pix_points_to_empty(
+                BrickData::Solid(voxel) => VoxelContent::pix_points_to_empty(
                     voxel,
                     &self.voxel_color_palette,
                     &self.voxel_data_palette,
                 ),
                 BrickData::Parted(_brick) => {
                     if let Some(data) = bricks[target_sectant as usize].get_homogeneous_data() {
-                        NodeContent::pix_points_to_empty(
+                        VoxelContent::pix_points_to_empty(
                             data,
                             &self.voxel_color_palette,
                             &self.voxel_data_palette,
@@ -188,9 +188,9 @@ impl<
                     }
                 }
             },
-            NodeContent::UniformLeaf(brick) => match brick {
+            VoxelContent::UniformLeaf(brick) => match brick {
                 BrickData::Empty => true,
-                BrickData::Solid(voxel) => NodeContent::pix_points_to_empty(
+                BrickData::Solid(voxel) => VoxelContent::pix_points_to_empty(
                     voxel,
                     &self.voxel_color_palette,
                     &self.voxel_data_palette,
@@ -205,7 +205,7 @@ impl<
                     for x in check_start.x..(check_start.x + check_size) {
                         for y in check_start.y..(check_start.y + check_size) {
                             for z in check_start.z..(check_start.z + check_size) {
-                                if !NodeContent::pix_points_to_empty(
+                                if !VoxelContent::pix_points_to_empty(
                                     &brick[flat_projection(x, y, z, self.brick_dim as usize)],
                                     &self.voxel_color_palette,
                                     &self.voxel_data_palette,
@@ -218,11 +218,11 @@ impl<
                     true
                 }
             },
-            NodeContent::Internal(_occupied_bits) => {
+            VoxelContent::Internal(_occupied_bits) => {
                 debug_assert!(
                     !matches!(
                         self.node_children[node_key],
-                        NodeChildren::OccupancyBitmap(_)
+                        VoxelChildren::OccupancyBitmap(_)
                     ),
                     "Expected for internal node to not have OccupancyBitmap as assigned child: {:?}",
                     self.node_children[node_key],
@@ -263,8 +263,8 @@ impl<
     /// * `target_sectant` - The sectant that must have a child
     pub(crate) fn subdivide_leaf_to_nodes(&mut self, node_key: usize, target_sectant: usize) {
         // Since the node is expected to be a leaf, by default it is supposed that it is fully occupied
-        let mut node_content = NodeContent::Internal(
-            if let NodeChildren::OccupancyBitmap(occupied_bits) = self.node_children[node_key] {
+        let mut node_content = VoxelContent::Internal(
+            if let VoxelChildren::OccupancyBitmap(occupied_bits) = self.node_children[node_key] {
                 occupied_bits
             } else {
                 panic!(
@@ -276,10 +276,10 @@ impl<
         std::mem::swap(&mut node_content, self.nodes.get_mut(node_key));
         let mut node_new_children = [empty_marker(); BOX_NODE_CHILDREN_COUNT];
         match node_content {
-            NodeContent::Nothing | NodeContent::Internal(_) => {
+            VoxelContent::Nothing | VoxelContent::Internal(_) => {
                 panic!("Non-leaf node expected to be Leaf")
             }
-            NodeContent::Leaf(mut bricks) => {
+            VoxelContent::Leaf(mut bricks) => {
                 // All contained bricks shall be converted to leaf nodes
                 for sectant in 0..BOX_NODE_CHILDREN_COUNT {
                     let mut brick = BrickData::Empty;
@@ -290,13 +290,13 @@ impl<
                     // Push in a new child even if the brick is empty for the target sectant
                     {
                         // Push in the new(placeholder) child
-                        node_new_children[sectant] = self.nodes.push(NodeContent::Nothing) as u32;
+                        node_new_children[sectant] = self.nodes.push(VoxelContent::Nothing) as u32;
                         // Potentially Resize node children array to accomodate the new child
                         self.node_children.resize(
                             self.node_children
                                 .len()
                                 .max(node_new_children[sectant] as usize + 1),
-                            NodeChildren::default(),
+                            VoxelChildren::default(),
                         );
                     }
 
@@ -305,15 +305,15 @@ impl<
                         BrickData::Solid(voxel) => {
                             // Set the occupancy bitmap for the new leaf child node
                             self.node_children[node_new_children[sectant] as usize] =
-                                NodeChildren::OccupancyBitmap(u64::MAX);
+                                VoxelChildren::OccupancyBitmap(u64::MAX);
                             *self.nodes.get_mut(node_new_children[sectant] as usize) =
-                                NodeContent::UniformLeaf(BrickData::Solid(voxel));
+                                VoxelContent::UniformLeaf(BrickData::Solid(voxel));
                         }
                         BrickData::Parted(brick) => {
                             // Calculcate the occupancy bitmap for the new leaf child node
                             // As it is a higher resolution, than the current bitmap, it needs to be bruteforced
                             self.node_children[node_new_children[sectant] as usize] =
-                                NodeChildren::OccupancyBitmap(
+                                VoxelChildren::OccupancyBitmap(
                                     bricks[sectant].calculate_occupied_bits(
                                         self.brick_dim as usize,
                                         &self.voxel_color_palette,
@@ -321,27 +321,27 @@ impl<
                                     ),
                                 );
                             *self.nodes.get_mut(node_new_children[sectant] as usize) =
-                                NodeContent::UniformLeaf(BrickData::Parted(brick.clone()));
+                                VoxelContent::UniformLeaf(BrickData::Parted(brick.clone()));
                         }
                     }
                 }
             }
-            NodeContent::UniformLeaf(brick) => {
+            VoxelContent::UniformLeaf(brick) => {
                 // The leaf will be divided into 64 bricks, and the contents will be mapped from the current brick
                 match brick {
                     BrickData::Empty => {
                         // Push in an empty leaf child to the target sectant ( that will be populated later )
                         // But nothing else to do, as the Uniform leaf is empty!
                         node_new_children[target_sectant] =
-                            self.nodes.push(NodeContent::Nothing) as u32;
+                            self.nodes.push(VoxelContent::Nothing) as u32;
                         self.node_children.resize(
                             self.node_children
                                 .len()
                                 .max(node_new_children[target_sectant] as usize + 1),
-                            NodeChildren::default(),
+                            VoxelChildren::default(),
                         );
                         self.node_children[node_new_children[target_sectant] as usize] =
-                            NodeChildren::OccupancyBitmap(0);
+                            VoxelChildren::OccupancyBitmap(0);
                     }
                     BrickData::Solid(voxel) => {
                         // Push in all solid children for child sectants
@@ -349,14 +349,14 @@ impl<
                         {
                             *new_child = self
                                 .nodes
-                                .push(NodeContent::UniformLeaf(BrickData::Solid(voxel)))
+                                .push(VoxelContent::UniformLeaf(BrickData::Solid(voxel)))
                                 as u32;
                             self.node_children.resize(
                                 self.node_children.len().max(*new_child as usize + 1),
-                                NodeChildren::default(),
+                                VoxelChildren::default(),
                             );
                             self.node_children[*new_child as usize] =
-                                NodeChildren::OccupancyBitmap(u64::MAX);
+                                VoxelChildren::OccupancyBitmap(u64::MAX);
                         }
                     }
                     BrickData::Parted(brick) => {
@@ -372,7 +372,7 @@ impl<
                             );
                             node_new_children[sectant] = self
                                 .nodes
-                                .push(NodeContent::UniformLeaf(BrickData::Parted(new_brick)))
+                                .push(VoxelContent::UniformLeaf(BrickData::Parted(new_brick)))
                                 as u32;
 
                             // Potentially Resize node children array to accomodate the new child
@@ -380,18 +380,18 @@ impl<
                                 self.node_children
                                     .len()
                                     .max(node_new_children[sectant] as usize + 1),
-                                NodeChildren::default(),
+                                VoxelChildren::default(),
                             );
 
                             // Set the occupancy bitmap for the new leaf child node
                             self.node_children[node_new_children[sectant] as usize] =
-                                NodeChildren::OccupancyBitmap(child_occupied_bits);
+                                VoxelChildren::OccupancyBitmap(child_occupied_bits);
                         }
                     }
                 }
             }
         }
-        self.node_children[node_key] = NodeChildren::Children(node_new_children);
+        self.node_children[node_key] = VoxelChildren::Children(node_new_children);
     }
 
     /// Tries to create a brick from the given node if possible. WARNING: Data loss may occur
@@ -400,11 +400,11 @@ impl<
             return BrickData::Empty;
         }
         match self.nodes.get(node_key) {
-            NodeContent::Nothing | NodeContent::Internal(_) | NodeContent::Leaf(_) => {
+            VoxelContent::Nothing | VoxelContent::Internal(_) | VoxelContent::Leaf(_) => {
                 BrickData::Empty
             }
 
-            NodeContent::UniformLeaf(brick) => brick.clone(),
+            VoxelContent::UniformLeaf(brick) => brick.clone(),
         }
     }
 
@@ -423,7 +423,7 @@ impl<
             for child in to_deallocate {
                 self.deallocate_children_of(child); // Recursion should be fine as depth is not expceted to be more, than 32
                 self.nodes.free(child);
-                self.node_children[child] = NodeChildren::NoChildren;
+                self.node_children[child] = VoxelChildren::NoChildren;
             }
         }
     }
@@ -432,11 +432,11 @@ impl<
     /// As they might be empty by fault and to correct them the occupied bits is required.
     pub(crate) fn stored_occupied_bits(&self, node_key: usize) -> u64 {
         match self.nodes.get(node_key) {
-            NodeContent::Leaf(_) | NodeContent::UniformLeaf(_) => {
+            VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_) => {
                 match self.node_children[node_key] {
-                    NodeChildren::OccupancyBitmap(occupied_bits) => occupied_bits,
-                    NodeChildren::NoChildren => 0,
-                    NodeChildren::Children(children) => {
+                    VoxelChildren::OccupancyBitmap(occupied_bits) => occupied_bits,
+                    VoxelChildren::NoChildren => 0,
+                    VoxelChildren::Children(children) => {
                         debug_assert!(
                             false,
                             "Expected node[{node_key}] to not have children.\nnode:{:?}\nchildren: {:?}",
@@ -447,28 +447,28 @@ impl<
                     }
                 }
             }
-            NodeContent::Nothing => 0,
-            NodeContent::Internal(occupied_bits) => *occupied_bits,
+            VoxelContent::Nothing => 0,
+            VoxelContent::Internal(occupied_bits) => *occupied_bits,
         }
     }
 
     /// Stores the given occupied bits for the given node based on key
     pub(crate) fn store_occupied_bits(&mut self, node_key: usize, new_occupied_bits: u64) {
         match self.nodes.get_mut(node_key) {
-            NodeContent::Internal(occupied_bits) => *occupied_bits = new_occupied_bits,
-            NodeContent::Nothing => {
-                self.node_children[node_key] = NodeChildren::OccupancyBitmap(new_occupied_bits)
+            VoxelContent::Internal(occupied_bits) => *occupied_bits = new_occupied_bits,
+            VoxelContent::Nothing => {
+                self.node_children[node_key] = VoxelChildren::OccupancyBitmap(new_occupied_bits)
             }
-            NodeContent::Leaf(_) | NodeContent::UniformLeaf(_) => {
+            VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_) => {
                 match self.node_children[node_key] {
-                    NodeChildren::NoChildren => {
+                    VoxelChildren::NoChildren => {
                         self.node_children[node_key] =
-                            NodeChildren::OccupancyBitmap(new_occupied_bits)
+                            VoxelChildren::OccupancyBitmap(new_occupied_bits)
                     }
-                    NodeChildren::OccupancyBitmap(ref mut occupied_bits) => {
+                    VoxelChildren::OccupancyBitmap(ref mut occupied_bits) => {
                         *occupied_bits = new_occupied_bits;
                     }
-                    NodeChildren::Children(_) => panic!(
+                    VoxelChildren::Children(_) => panic!(
                         "Expected Leaf node to have OccupancyBitmap instead of {:?}",
                         self.node_children[node_key]
                     ),

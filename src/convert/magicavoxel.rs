@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{OctreeError},
+        types::{ContreeError},
         Albedo, BoxTree, BoxTreeEntry, V3c, VoxelData,
     },
     spatial::math::{convert_coordinate, CoordinateSystemType},
@@ -328,7 +328,7 @@ impl<
                 ) {
                     Ok(_) => {}
                     Err(boxtree_error) => match boxtree_error {
-                        OctreeError::InvalidPosition { .. } => {
+                        ContreeError::InvalidPosition { .. } => {
                             panic!(
                                 "inserting into boxtree at at invalid position: {:?}",
                                 boxtree_error

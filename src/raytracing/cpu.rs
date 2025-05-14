@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{BrickData, NodeChildren, NodeContent, PaletteIndexValues},
+        types::{BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
         BoxTree, BoxTreeEntry, V3c, VoxelData, BOX_NODE_DIMENSION, OOB_SECTANT,
     },
     spatial::{
@@ -215,7 +215,7 @@ impl<
                 current_flat_index as usize
             );
 
-            if !NodeContent::pix_points_to_empty(
+            if !VoxelContent::pix_points_to_empty(
                 &brick[current_flat_index as usize],
                 &self.voxel_color_palette,
                 &self.voxel_data_palette,
@@ -269,7 +269,7 @@ impl<
             BrickData::Solid(voxel) => {
                 let impact_point = ray_current_point;
                 Some((
-                    NodeContent::pix_get_ref(
+                    VoxelContent::pix_get_ref(
                         voxel,
                         &self.voxel_color_palette,
                         &self.voxel_data_palette,
@@ -296,7 +296,7 @@ impl<
                     let impact_point = ray_current_point;
                     let impact_normal = cube_impact_normal(&hit_bounds, impact_point);
                     Some((
-                        NodeContent::pix_get_ref(
+                        VoxelContent::pix_get_ref(
                             &brick[leaf_brick_hit_flat_index],
                             &self.voxel_color_palette,
                             &self.voxel_data_palette,
@@ -359,16 +359,16 @@ impl<
 
                 let mut do_backtrack_after_leaf_miss = matches!(
                     self.nodes.get(current_node_key),
-                    NodeContent::UniformLeaf(_)
+                    VoxelContent::UniformLeaf(_)
                 );
 
                 // Probe bricks in leaf nodes if target not out of bounds
                 if target_sectant != OOB_SECTANT {
                     match self.nodes.get(current_node_key) {
-                        NodeContent::UniformLeaf(brick) => {
+                        VoxelContent::UniformLeaf(brick) => {
                             debug_assert!(matches!(
                                 self.node_children[current_node_key],
-                                NodeChildren::OccupancyBitmap(_)
+                                VoxelChildren::OccupancyBitmap(_)
                             ));
                             if let Some(hit) = self.probe_brick(
                                 ray,
@@ -381,10 +381,10 @@ impl<
                             }
                             do_backtrack_after_leaf_miss = true;
                         }
-                        NodeContent::Leaf(bricks) => {
+                        VoxelContent::Leaf(bricks) => {
                             debug_assert!(matches!(
                                 self.node_children[current_node_key],
-                                NodeChildren::OccupancyBitmap(_)
+                                VoxelChildren::OccupancyBitmap(_)
                             ));
                             if let Some(hit) = self.probe_brick(
                                 ray,
@@ -396,7 +396,7 @@ impl<
                                 return Some(hit);
                             }
                         }
-                        NodeContent::Internal(_) | NodeContent::Nothing => {}
+                        VoxelContent::Internal(_) | VoxelContent::Nothing => {}
                     }
                 };
 
@@ -435,7 +435,7 @@ impl<
                               // Eliminating this `continue` causes significant slowdown in GPU?!
                 }
 
-                if matches!(self.nodes.get(current_node_key), NodeContent::Internal(_))
+                if matches!(self.nodes.get(current_node_key), VoxelContent::Internal(_))
                     && 0 != (current_node_occupied_bits & (0x01 << target_sectant))
                 {
                     // PUSH

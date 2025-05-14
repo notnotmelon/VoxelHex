@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         detail::child_sectant_for,
-        types::{BoxTreeEntry, BrickData, NodeChildren, NodeContent, OctreeError},
+        types::{BoxTreeEntry, BrickData, VoxelChildren, VoxelContent, ContreeError},
         BoxTree, VoxelData, BOX_NODE_DIMENSION,
     },
     spatial::{
@@ -50,7 +50,7 @@ impl<
         &mut self,
         position: &V3c<u32>,
         data: E,
-    ) -> Result<(), OctreeError>
+    ) -> Result<(), ContreeError>
     where
         T: 'a,
     {
@@ -67,7 +67,7 @@ impl<
         position: &V3c<u32>,
         insert_size: u32,
         data: E,
-    ) -> Result<(), OctreeError>
+    ) -> Result<(), ContreeError>
     where
         T: 'a,
     {
@@ -82,7 +82,7 @@ impl<
         &mut self,
         position: &V3c<u32>,
         data: E,
-    ) -> Result<(), OctreeError>
+    ) -> Result<(), ContreeError>
     where
         T: 'a,
     {
@@ -94,7 +94,7 @@ impl<
         overwrite_if_empty: bool,
         position: &V3c<u32>,
         data: BoxTreeEntry<T>,
-    ) -> Result<(), OctreeError> {
+    ) -> Result<(), ContreeError> {
         self.insert_at_lod_internal(overwrite_if_empty, position, 1, data)
     }
 
@@ -104,11 +104,11 @@ impl<
         position_u32: &V3c<u32>,
         insert_size: u32,
         data: BoxTreeEntry<T>,
-    ) -> Result<(), OctreeError> {
+    ) -> Result<(), ContreeError> {
         let root_bounds = Cube::root_bounds(self.boxtree_size as f32);
         let position = V3c::<f32>::from(*position_u32);
         if !root_bounds.contains(&position) {
-            return Err(OctreeError::InvalidPosition {
+            return Err(ContreeError::InvalidPosition {
                 x: position.x as u32,
                 y: position.y as u32,
                 z: position.z as u32,
@@ -135,7 +135,7 @@ impl<
                 target_bounds.size >= 1.
                     || matches!(
                         self.nodes.get(current_node_key),
-                        NodeContent::UniformLeaf(_)
+                        VoxelContent::UniformLeaf(_)
                     ),
                 "Invalid target bounds(too small): {:?}",
                 target_bounds
@@ -163,7 +163,7 @@ impl<
 
                             // Whole child node to be overwritten with data
                             // Occupied bits are correctly set in post-processing
-                            if let NodeContent::Leaf(_) | NodeContent::UniformLeaf(_) =
+                            if let VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_) =
                                 self.nodes.get(current_node_key)
                             {
                                 self.subdivide_leaf_to_nodes(
@@ -177,23 +177,23 @@ impl<
                             if self.nodes.key_is_valid(target_child_key) {
                                 self.deallocate_children_of(target_child_key);
                                 *self.nodes.get_mut(target_child_key) =
-                                    NodeContent::UniformLeaf(BrickData::Solid(target_content));
+                                    VoxelContent::UniformLeaf(BrickData::Solid(target_content));
                                 self.node_children[target_child_key as usize] =
-                                    NodeChildren::OccupancyBitmap(u64::MAX);
+                                    VoxelChildren::OccupancyBitmap(u64::MAX);
                             } else {
                                 // Push in a new uniform leaf child
-                                let new_child_index = self.nodes.push(NodeContent::UniformLeaf(
+                                let new_child_index = self.nodes.push(VoxelContent::UniformLeaf(
                                     BrickData::Solid(target_content),
                                 )) as u32;
                                 self.node_children.resize(
                                     self.node_children.len().max(new_child_index as usize + 1),
-                                    NodeChildren::default(),
+                                    VoxelChildren::default(),
                                 );
                                 *self.node_children[current_node_key]
                                     .child_mut(child_sectant as usize)
                                     .unwrap() = new_child_index;
                                 self.node_children[new_child_index as usize] =
-                                    NodeChildren::OccupancyBitmap(u64::MAX);
+                                    VoxelChildren::OccupancyBitmap(u64::MAX);
                             }
                         }
                     },
@@ -220,13 +220,13 @@ impl<
                     // current node size is still larger, than the requested size
                     if matches!(
                         self.nodes.get(current_node_key),
-                        NodeContent::Leaf(_) | NodeContent::UniformLeaf(_)
+                        VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_)
                     ) {
                         // The current Node is a leaf, representing the area under current_bounds
                         // filled with the data stored in NodeContent::*Leaf(_)
                         let target_match = match self.nodes.get(current_node_key) {
-                            NodeContent::Internal(_) | NodeContent::Nothing => false,
-                            NodeContent::UniformLeaf(brick) => match brick {
+                            VoxelContent::Internal(_) | VoxelContent::Nothing => false,
+                            VoxelContent::UniformLeaf(brick) => match brick {
                                 BrickData::Empty => false,
                                 BrickData::Solid(voxel) => *voxel == target_content,
                                 BrickData::Parted(brick) => {
@@ -244,7 +244,7 @@ impl<
                                     brick[index_in_matrix] == target_content
                                 }
                             },
-                            NodeContent::Leaf(bricks) => {
+                            VoxelContent::Leaf(bricks) => {
                                 match &bricks[target_child_sectant as usize] {
                                     BrickData::Empty => false,
                                     BrickData::Solid(voxel) => *voxel == target_content,
@@ -289,23 +289,23 @@ impl<
                         // current Node is a non-leaf Node, which doesn't have the child at the requested position,
                         // so it is inserted and the Node becomes non-empty
                         match self.nodes.get(current_node_key) {
-                            NodeContent::Nothing => {
+                            VoxelContent::Nothing => {
                                 // A special case during the first insertion, where the root Node was empty beforehand
-                                *self.nodes.get_mut(current_node_key) = NodeContent::Internal(0);
+                                *self.nodes.get_mut(current_node_key) = VoxelContent::Internal(0);
                             }
-                            NodeContent::Internal(_occupied_bits) => {} // Nothing to do
-                            NodeContent::Leaf(_) | NodeContent::UniformLeaf(_) => {
+                            VoxelContent::Internal(_occupied_bits) => {} // Nothing to do
+                            VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_) => {
                                 panic!("Leaf Node expected to be non-leaf!");
                             }
                         }
 
                         // Insert a new child Node
-                        let new_child_node = self.nodes.push(NodeContent::Nothing) as u32;
+                        let new_child_node = self.nodes.push(VoxelContent::Nothing) as u32;
 
                         // Update node_children to reflect the inserted node
                         self.node_children.resize(
                             self.node_children.len().max(self.nodes.len()),
-                            NodeChildren::default(),
+                            VoxelChildren::default(),
                         );
                         *self.node_children[current_node_key]
                             .child_mut(target_child_sectant as usize)
@@ -351,8 +351,8 @@ impl<
             }
 
             // In case any node is NodeContent::Nothing, it is to be converted to an internal node
-            if let NodeContent::Nothing = self.nodes.get(node_key as usize) {
-                *self.nodes.get_mut(node_key as usize) = NodeContent::Internal(0);
+            if let VoxelContent::Nothing = self.nodes.get(node_key as usize) {
+                *self.nodes.get_mut(node_key as usize) = VoxelContent::Internal(0);
             }
 
             // Update Node occupied bits
@@ -384,7 +384,7 @@ impl<
             {
                 for sectant in 0..BOX_NODE_CHILDREN_COUNT {
                     // with empty children, the relevant occupied bits should be 0
-                    if let NodeChildren::OccupancyBitmap(occupied_bits) =
+                    if let VoxelChildren::OccupancyBitmap(occupied_bits) =
                         self.node_children[node_key as usize]
                     {
                         if self.node_empty_at(node_key as usize, sectant as u8) {
@@ -406,7 +406,7 @@ impl<
             if simplifyable
                 && matches!(
                     self.nodes.get(node_key as usize),
-                    NodeContent::Leaf(_) | NodeContent::UniformLeaf(_)
+                    VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_)
                 )
             {
                 // In case of leaf nodes, just try to simplify and continue

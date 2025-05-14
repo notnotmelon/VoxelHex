@@ -1,7 +1,7 @@
 use crate::boxtree::{
     empty_marker,
     types::{
-        Albedo, BrickData, NodeChildren, NodeConnection, NodeContent, PaletteIndexValues, VoxelData,
+        Albedo, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData,
     },
     BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
@@ -29,33 +29,33 @@ use std::{
 //  ░░█████████  █████   █████ █████ ███████████ ██████████   █████   █████ ██████████ █████  ░░█████
 //   ░░░░░░░░░  ░░░░░   ░░░░░ ░░░░░ ░░░░░░░░░░░ ░░░░░░░░░░   ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░    ░░░░░
 //####################################################################################
-impl<T: Default + Debug> Debug for NodeChildren<T> {
+impl Debug for VoxelChildren {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         match &self {
-            NodeChildren::NoChildren => write!(f, "NodeChildren::NoChildren"),
-            NodeChildren::Children(array) => {
+            VoxelChildren::NoChildren => write!(f, "NodeChildren::NoChildren"),
+            VoxelChildren::Children(array) => {
                 write!(f, "NodeChildren::Children({:?})", array)
             }
-            NodeChildren::OccupancyBitmap(mask) => {
+            VoxelChildren::OccupancyBitmap(mask) => {
                 write!(f, "NodeChildren::OccupancyBitmap({:#10X})", mask)
             }
         }
     }
 }
-impl NodeConnection {
+impl VoxelChildren {
     pub(crate) fn child(&self, sectant: u8) -> usize {
         match &self {
-            NodeChildren::Children(c) => c[sectant as usize] as usize,
+            VoxelChildren::Children(c) => c[sectant as usize] as usize,
             _ => empty_marker(),
         }
     }
 
     pub(crate) fn child_mut(&mut self, index: usize) -> Option<&mut u32> {
-        if let NodeChildren::NoChildren = self {
-            *self = NodeChildren::Children([empty_marker(); BOX_NODE_CHILDREN_COUNT]);
+        if let VoxelChildren::NoChildren = self {
+            *self = VoxelChildren::Children([empty_marker(); BOX_NODE_CHILDREN_COUNT]);
         }
         match self {
-            NodeChildren::Children(c) => Some(&mut c[index]),
+            VoxelChildren::Children(c) => Some(&mut c[index]),
             _ => panic!("Attempted to modify NodeChild[{:?}] of {:?}", index, self),
         }
     }
@@ -63,7 +63,7 @@ impl NodeConnection {
     /// Provides a slice for iteration, if there are children to iterate on
     pub(crate) fn iter(&self) -> Option<std::slice::Iter<u32>> {
         match &self {
-            NodeChildren::Children(c) => Some(c.iter()),
+            VoxelChildren::Children(c) => Some(c.iter()),
             _ => None,
         }
     }
@@ -71,10 +71,10 @@ impl NodeConnection {
     /// Erases content, if any
     pub(crate) fn clear(&mut self, child_index: usize) {
         debug_assert!(child_index < 8);
-        if let NodeChildren::Children(c) = self {
+        if let VoxelChildren::Children(c) = self {
             c[child_index] = empty_marker();
             if 8 == c.iter().filter(|e| **e == empty_marker::<u32>()).count() {
-                *self = NodeChildren::NoChildren;
+                *self = VoxelChildren::NoChildren;
             }
         }
     }
@@ -111,7 +111,7 @@ impl BrickData<PaletteIndexValues> {
             for y in 0..brick_dimension {
                 for z in 0..brick_dimension {
                     let flat_index = flat_projection(x, y, z, brick_dimension);
-                    if !NodeContent::pix_points_to_empty(
+                    if !VoxelContent::pix_points_to_empty(
                         &brick[flat_index],
                         color_palette,
                         data_palette,
@@ -140,7 +140,7 @@ impl BrickData<PaletteIndexValues> {
         match self {
             BrickData::Empty => 0,
             BrickData::Solid(voxel) => {
-                if NodeContent::pix_points_to_empty(voxel, color_palette, data_palette) {
+                if VoxelContent::pix_points_to_empty(voxel, color_palette, data_palette) {
                     0
                 } else {
                     u64::MAX
@@ -179,11 +179,11 @@ impl BrickData<PaletteIndexValues> {
         match self {
             BrickData::Empty => true,
             BrickData::Solid(voxel) => {
-                NodeContent::pix_points_to_empty(voxel, color_palette, data_palette)
+                VoxelContent::pix_points_to_empty(voxel, color_palette, data_palette)
             }
             BrickData::Parted(brick) => {
                 for voxel in brick.iter() {
-                    if !NodeContent::pix_points_to_empty(voxel, color_palette, data_palette) {
+                    if !VoxelContent::pix_points_to_empty(voxel, color_palette, data_palette) {
                         return false;
                     }
                 }
@@ -199,7 +199,7 @@ impl BrickData<PaletteIndexValues> {
         data_palette: &[V],
     ) -> bool {
         if let Some(homogeneous_type) = self.get_homogeneous_data() {
-            if NodeContent::pix_points_to_empty(homogeneous_type, color_palette, data_palette) {
+            if VoxelContent::pix_points_to_empty(homogeneous_type, color_palette, data_palette) {
                 *self = BrickData::Empty;
             } else {
                 *self = BrickData::Solid(*homogeneous_type);
@@ -230,7 +230,7 @@ impl BrickData<PaletteIndexValues> {
 //   ░░░░░░░░░     ░░░░░░░    ░░░░░    ░░░░░    ░░░░░    ░░░░░░░░░░ ░░░░░    ░░░░░    ░░░░░
 //####################################################################################
 
-impl NodeContent<PaletteIndexValues> {
+impl VoxelContent {
     pub(crate) fn pix_visual(color_index: u16) -> PaletteIndexValues {
         (color_index as u32) | ((empty_marker::<u16>() as u32) << 16)
     }
@@ -353,7 +353,7 @@ impl NodeContent<PaletteIndexValues> {
         data_palette: &[V],
     ) -> bool {
         match self {
-            NodeContent::UniformLeaf(brick) => match brick {
+            VoxelContent::UniformLeaf(brick) => match brick {
                 BrickData::Empty => true,
                 BrickData::Solid(voxel) => {
                     Self::pix_points_to_empty(voxel, color_palette, data_palette)
@@ -367,7 +367,7 @@ impl NodeContent<PaletteIndexValues> {
                     true
                 }
             },
-            NodeContent::Leaf(bricks) => {
+            VoxelContent::Leaf(bricks) => {
                 for mat in bricks.iter() {
                     match mat {
                         BrickData::Empty => {
@@ -389,15 +389,15 @@ impl NodeContent<PaletteIndexValues> {
                 }
                 true
             }
-            NodeContent::Internal(_) => false,
-            NodeContent::Nothing => true,
+            VoxelContent::Internal(_) => false,
+            VoxelContent::Nothing => true,
         }
     }
 
     /// Returns with true if all contained elements equal the given data
     pub(crate) fn is_all(&self, data: &PaletteIndexValues) -> bool {
         match self {
-            NodeContent::UniformLeaf(brick) => match brick {
+            VoxelContent::UniformLeaf(brick) => match brick {
                 BrickData::Empty => false,
                 BrickData::Solid(voxel) => voxel == data,
                 BrickData::Parted(_brick) => {
@@ -408,7 +408,7 @@ impl NodeContent<PaletteIndexValues> {
                     }
                 }
             },
-            NodeContent::Leaf(bricks) => {
+            VoxelContent::Leaf(bricks) => {
                 for mat in bricks.iter() {
                     let brick_is_all_data = match mat {
                         BrickData::Empty => false,
@@ -427,23 +427,23 @@ impl NodeContent<PaletteIndexValues> {
                 }
                 true
             }
-            NodeContent::Internal(_) | NodeContent::Nothing => false,
+            VoxelContent::Internal(_) | VoxelContent::Nothing => false,
         }
     }
 
-    pub(crate) fn compare(&self, other: &NodeContent<PaletteIndexValues>) -> bool {
+    pub(crate) fn compare(&self, other: &VoxelContent) -> bool {
         match self {
-            NodeContent::Nothing => matches!(other, NodeContent::Nothing),
-            NodeContent::Internal(_) => false, // Internal nodes comparison doesn't make sense
-            NodeContent::UniformLeaf(brick) => {
-                if let NodeContent::UniformLeaf(obrick) = other {
+            VoxelContent::Nothing => matches!(other, VoxelContent::Nothing),
+            VoxelContent::Internal(_) => false, // Internal nodes comparison doesn't make sense
+            VoxelContent::UniformLeaf(brick) => {
+                if let VoxelContent::UniformLeaf(obrick) = other {
                     brick == obrick
                 } else {
                     false
                 }
             }
-            NodeContent::Leaf(bricks) => {
-                if let NodeContent::Leaf(obricks) = other {
+            VoxelContent::Leaf(bricks) => {
+                if let VoxelContent::Leaf(obricks) = other {
                     bricks == obricks
                 } else {
                     false

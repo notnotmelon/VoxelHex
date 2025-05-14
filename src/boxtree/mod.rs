@@ -12,7 +12,7 @@ pub use types::{
 use crate::{
     boxtree::{
         detail::child_sectant_for,
-        types::{BrickData, NodeChildren, NodeContent, OctreeError, PaletteIndexValues},
+        types::{BrickData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
     },
     object_pool::{empty_marker, ObjectPool},
     spatial::{
@@ -167,31 +167,31 @@ impl<
     /// creates an boxtree with the given size
     /// * `brick_dimension` - must be one of `(2^x)` and smaller than the size of the boxtree
     /// * `size` - must be `brick_dimension * (4^x)`, e.g: brick_dimension == 2 --> size can be 8,32,128...
-    pub fn new(size: u32, brick_dimension: u32) -> Result<Self, OctreeError> {
+    pub fn new(size: u32, brick_dimension: u32) -> Result<Self, ContreeError> {
         if 0 == size || (brick_dimension as f32).log(2.0).fract() != 0.0 {
-            return Err(OctreeError::InvalidBrickDimension(brick_dimension));
+            return Err(ContreeError::InvalidBrickDimension(brick_dimension));
         }
         if brick_dimension > size
             || 0 == size
             || (size as f32 / brick_dimension as f32).log(4.0).fract() != 0.0
         {
-            return Err(OctreeError::InvalidSize(size));
+            return Err(ContreeError::InvalidSize(size));
         }
         if size < (brick_dimension * BOX_NODE_DIMENSION as u32) {
-            return Err(OctreeError::InvalidStructure(
+            return Err(ContreeError::InvalidStructure(
                 "Octree size must be larger, than BOX_NODE_DIMENSION * brick dimension".into(),
             ));
         }
         let node_count_estimation = (size / brick_dimension).pow(3);
         let mut nodes = ObjectPool::with_capacity(node_count_estimation.min(1024) as usize);
-        let root_node_key = nodes.push(NodeContent::Nothing); // The first element is the root Node
+        let root_node_key = nodes.push(VoxelContent::Nothing); // The first element is the root Node
         assert!(root_node_key == 0);
         Ok(Self {
             auto_simplify: true,
             boxtree_size: size,
             brick_dim: brick_dimension,
             nodes,
-            node_children: vec![NodeChildren::default()],
+            node_children: vec![VoxelChildren::default()],
             voxel_color_palette: vec![],
             voxel_data_palette: vec![],
             map_to_color_index_in_palette: HashMap::new(),
@@ -202,7 +202,7 @@ impl<
     /// Getter function for the boxtree
     /// * Returns immutable reference to the data at the given position, if there is any
     pub fn get(&self, position: &V3c<u32>) -> BoxTreeEntry<T> {
-        NodeContent::pix_get_ref(
+        VoxelContent::pix_get_ref(
             &self.get_internal(
                 Self::ROOT_NODE_KEY as usize,
                 Cube::root_bounds(self.boxtree_size as f32),
@@ -228,8 +228,8 @@ impl<
 
         loop {
             match self.nodes.get(current_node_key) {
-                NodeContent::Nothing => return empty_marker(),
-                NodeContent::Leaf(bricks) => {
+                VoxelContent::Nothing => return empty_marker(),
+                VoxelContent::Leaf(bricks) => {
                     // In case brick_dimension == boxtree size, the root node can not be a leaf...
                     debug_assert!(self.brick_dim < self.boxtree_size);
 
@@ -255,7 +255,7 @@ impl<
                                 mat_index.z as usize,
                                 self.brick_dim as usize,
                             );
-                            if !NodeContent::pix_points_to_empty(
+                            if !VoxelContent::pix_points_to_empty(
                                 &brick[mat_index],
                                 &self.voxel_color_palette,
                                 &self.voxel_data_palette,
@@ -269,7 +269,7 @@ impl<
                         }
                     }
                 }
-                NodeContent::UniformLeaf(brick) => match brick {
+                VoxelContent::UniformLeaf(brick) => match brick {
                     BrickData::Empty => {
                         return empty_marker();
                     }
@@ -288,7 +288,7 @@ impl<
                         return *voxel;
                     }
                 },
-                NodeContent::Internal(occupied_bits) => {
+                VoxelContent::Internal(occupied_bits) => {
                     // Hash the position to the target child
                     let child_sectant_at_position = child_sectant_for(&current_bounds, &position);
                     let child_at_position =

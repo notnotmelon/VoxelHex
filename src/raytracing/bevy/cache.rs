@@ -1,6 +1,6 @@
 use crate::{
     boxtree::{
-        types::{BrickData, NodeContent},
+        types::{BrickData, VoxelContent},
         BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
@@ -183,15 +183,15 @@ impl BoxTreeGPUDataHandler {
     {
         // set node type
         match tree.nodes.get(node_key) {
-            NodeContent::Internal(_) | NodeContent::Nothing => {
+            VoxelContent::Internal(_) | VoxelContent::Nothing => {
                 meta_array[node_index / 8] &= !(0x01 << (node_index % 8));
                 meta_array[node_index / 8] &= !(0x01 << (8 + (node_index % 8)));
             }
-            NodeContent::Leaf(_bricks) => {
+            VoxelContent::Leaf(_bricks) => {
                 meta_array[node_index / 8] |= 0x01 << (node_index % 8);
                 meta_array[node_index / 8] &= !(0x01 << (8 + (node_index % 8)));
             }
-            NodeContent::UniformLeaf(_brick) => {
+            VoxelContent::UniformLeaf(_brick) => {
                 meta_array[node_index / 8] |= 0x01 << (node_index % 8);
                 meta_array[node_index / 8] |= 0x01 << (8 + (node_index % 8));
             }
@@ -267,22 +267,22 @@ impl BoxTreeGPUDataHandler {
 
         // Erase child connection
         match tree.nodes.get(*parent_key) {
-            NodeContent::Nothing => {
+            VoxelContent::Nothing => {
                 panic!("HOW DO I ERASE NOTHING. AMERICA EXPLAIN")
             }
-            NodeContent::Internal(_) | NodeContent::Leaf(_) => {
+            VoxelContent::Internal(_) | VoxelContent::Leaf(_) => {
                 self.render_data.node_children[parent_children_offset] = empty_marker::<u32>();
             }
-            NodeContent::UniformLeaf(_) => {
+            VoxelContent::UniformLeaf(_) => {
                 self.render_data.node_children[parent_first_child_index] = empty_marker::<u32>();
             }
         }
 
         match tree.nodes.get(*parent_key) {
-            NodeContent::Nothing => {
+            VoxelContent::Nothing => {
                 panic!("HOW DO I ERASE NOTHING. AMERICA EXPLAIN")
             }
-            NodeContent::Internal(_occupied_bits) => {
+            VoxelContent::Internal(_occupied_bits) => {
                 debug_assert!(
                     self.node_key_vs_meta_index
                         .contains_right(&child_descriptor),
@@ -299,11 +299,11 @@ impl BoxTreeGPUDataHandler {
 
                 modified_nodes.push(child_descriptor);
             }
-            NodeContent::UniformLeaf(_) | NodeContent::Leaf(_) => {
+            VoxelContent::UniformLeaf(_) | VoxelContent::Leaf(_) => {
                 let brick_index = child_descriptor & 0x7FFFFFFF;
                 debug_assert!(
                     (0 == child_sectant)
-                        || matches!(tree.nodes.get(*parent_key), NodeContent::Leaf(_)),
+                        || matches!(tree.nodes.get(*parent_key), VoxelContent::Leaf(_)),
                     "Expected child sectant in uniform leaf to be 0 in: {:?}",
                     (meta_index, child_sectant)
                 );
@@ -424,8 +424,8 @@ impl BoxTreeGPUDataHandler {
         // Add child nodes of new child if any is available
         let parent_first_child_index = node_element_index * BOX_NODE_CHILDREN_COUNT;
         match tree.nodes.get(node_key) {
-            NodeContent::Nothing => {}
-            NodeContent::Internal(_) => {
+            VoxelContent::Nothing => {}
+            VoxelContent::Internal(_) => {
                 for sectant in 0..BOX_NODE_CHILDREN_COUNT {
                     let child_key = tree.node_children[node_key].child(sectant as u8);
                     if child_key != empty_marker::<u32>() as usize {
@@ -440,7 +440,7 @@ impl BoxTreeGPUDataHandler {
                     }
                 }
             }
-            NodeContent::UniformLeaf(brick) => {
+            VoxelContent::UniformLeaf(brick) => {
                 if let BrickData::Solid(voxel) = brick {
                     self.render_data.node_children[parent_first_child_index] = 0x80000000 | *voxel;
                 } else {
@@ -448,7 +448,7 @@ impl BoxTreeGPUDataHandler {
                         empty_marker::<u32>();
                 }
             }
-            NodeContent::Leaf(bricks) => {
+            VoxelContent::Leaf(bricks) => {
                 for (sectant, brick) in bricks.iter().enumerate().take(BOX_NODE_CHILDREN_COUNT) {
                     if let BrickData::Solid(voxel) = brick {
                         self.render_data.node_children[parent_first_child_index + sectant] =
@@ -538,9 +538,9 @@ impl BoxTreeGPUDataHandler {
         let (brick, node_entry) = 
             (
                 match tree.nodes.get(node_key) {
-                    NodeContent::UniformLeaf(brick) => brick,
-                    NodeContent::Leaf(bricks) => &bricks[target_sectant as usize],
-                    NodeContent::Nothing | NodeContent::Internal(_) => {
+                    VoxelContent::UniformLeaf(brick) => brick,
+                    VoxelContent::Leaf(bricks) => &bricks[target_sectant as usize],
+                    VoxelContent::Nothing | VoxelContent::Internal(_) => {
                         panic!("Trying to add brick from Internal or empty node!")
                     }
                 },

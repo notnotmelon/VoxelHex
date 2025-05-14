@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// error types during usage or creation of the boxtree
 #[derive(Debug)]
-pub enum OctreeError {
+pub enum ContreeError {
     /// Octree creation was attempted with an invalid boxtree size
     InvalidSize(u32),
 
@@ -53,9 +53,7 @@ where
 
 #[derive(Debug, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum NodeContent<T>
-where
-    T: Clone + PartialEq + Clone,
+pub(crate) enum VoxelContent
 {
     /// Node is empty
     #[default]
@@ -64,19 +62,19 @@ where
     /// Internal node + cache data to store the occupancy of the enclosed nodes
     Internal(u64),
 
-    /// Node contains 8 children, each with their own brickdata
-    Leaf([BrickData<T>; BOX_NODE_CHILDREN_COUNT]),
+    /// Node contains 64 children, each with their own brickdata
+    Leaf([BrickData<PaletteIndexValues>; BOX_NODE_CHILDREN_COUNT]),
 
     /// Node has one child, which takes up the entirety of the node with its brick data
-    UniformLeaf(BrickData<T>),
+    UniformLeaf(BrickData<PaletteIndexValues>),
 }
 
 #[derive(Default, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum NodeChildren<T: Default> {
+pub(crate) enum VoxelChildren {
     #[default]
     NoChildren,
-    Children([T; BOX_NODE_CHILDREN_COUNT]),
+    Children([u32; BOX_NODE_CHILDREN_COUNT]),
     OccupancyBitmap(u64), // In case of leaf nodes
 }
 
@@ -97,8 +95,6 @@ pub struct Albedo {
 }
 
 pub(crate) type PaletteIndexValues = u32;
-pub(crate) type NodeData = NodeContent<PaletteIndexValues>;
-pub(crate) type NodeConnection = NodeChildren<u32>;
 
 /// Sparse 64Tree of Voxel Bricks, where each leaf node contains a brick of voxels.
 /// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
@@ -117,10 +113,10 @@ where
     pub(crate) boxtree_size: u32,
 
     /// Storing data at each position through palette index values
-    pub(crate) nodes: ObjectPool<NodeData>,
+    pub(crate) nodes: ObjectPool<VoxelContent>,
 
     /// Node Connections
-    pub(crate) node_children: Vec<NodeConnection>,
+    pub(crate) node_children: Vec<VoxelChildren>,
 
     /// The albedo colors used by the boxtree. Maximum 65535 colors can be used at once
     /// because of a limitation on GPU raytracing, to spare space index values refering the palettes

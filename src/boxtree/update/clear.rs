@@ -1,7 +1,7 @@
 use crate::{
     boxtree::{
         detail::child_sectant_for,
-        types::{BrickData, NodeChildren, NodeContent, OctreeError, PaletteIndexValues},
+        types::{BrickData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
         BoxTree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -41,7 +41,7 @@ impl<
     //   ░░░░░░░░░  ░░░░░░░░░░░ ░░░░░░░░░░ ░░░░░   ░░░░░ ░░░░░   ░░░░░
     //####################################################################################
     /// clears the voxel at the given position
-    pub fn clear(&mut self, position: &V3c<u32>) -> Result<(), OctreeError> {
+    pub fn clear(&mut self, position: &V3c<u32>) -> Result<(), ContreeError> {
         self.clear_at_lod(position, 1)
     }
 
@@ -52,10 +52,10 @@ impl<
         &mut self,
         position: &V3c<u32>,
         clear_size: u32,
-    ) -> Result<(), OctreeError> {
+    ) -> Result<(), ContreeError> {
         let root_bounds = Cube::root_bounds(self.boxtree_size as f32);
         if !root_bounds.contains(&V3c::from(*position)) {
-            return Err(OctreeError::InvalidPosition {
+            return Err(ContreeError::InvalidPosition {
                 x: position.x,
                 y: position.y,
                 z: position.z,
@@ -81,7 +81,7 @@ impl<
                 target_bounds.size >= 1.
                     || matches!(
                         self.nodes.get(current_node_key),
-                        NodeContent::UniformLeaf(_)
+                        VoxelContent::UniformLeaf(_)
                     ),
                 "Invalid target bounds(too small): {:?}",
                 target_bounds
@@ -90,7 +90,7 @@ impl<
             if clear_size > 1
                 && target_bounds.size <= clear_size as f32
                 && *position <= target_bounds.min_position.into()
-                && matches!(self.nodes.get(current_node_key), NodeContent::Internal(_))
+                && matches!(self.nodes.get(current_node_key), VoxelContent::Internal(_))
             {
                 // Parent occupied bits are correctly set in post-processing
                 actual_update_size = Self::execute_for_relevant_sectants(
@@ -112,8 +112,8 @@ impl<
                                 // The whole node to be erased
                                 if self.nodes.key_is_valid(target_child_key) {
                                     self.deallocate_children_of(target_child_key);
-                                    *self.nodes.get_mut(target_child_key) = NodeContent::Nothing;
-                                    self.node_children[target_child_key] = NodeChildren::NoChildren;
+                                    *self.nodes.get_mut(target_child_key) = VoxelContent::Nothing;
+                                    self.node_children[target_child_key] = VoxelChildren::NoChildren;
                                 }
                                 node_stack.push((target_child_key as u32, target_bounds));
                             }
@@ -138,17 +138,17 @@ impl<
                     // no children are available for the target sectant
                     if matches!(
                         self.nodes.get(current_node_key),
-                        NodeContent::Leaf(_) | NodeContent::UniformLeaf(_)
+                        VoxelContent::Leaf(_) | VoxelContent::UniformLeaf(_)
                     ) {
                         // The current Node is a leaf, representing the area under current_bounds
                         // filled with the data stored in NodeContent::*Leaf(_)
                         let target_match = match self.nodes.get(current_node_key) {
-                            NodeContent::Nothing | NodeContent::Internal(_) => {
+                            VoxelContent::Nothing | VoxelContent::Internal(_) => {
                                 panic!("Non-leaf node expected to be leaf!")
                             }
-                            NodeContent::UniformLeaf(brick) => match brick {
+                            VoxelContent::UniformLeaf(brick) => match brick {
                                 BrickData::Empty => true,
-                                BrickData::Solid(voxel) => NodeContent::pix_points_to_empty(
+                                BrickData::Solid(voxel) => VoxelContent::pix_points_to_empty(
                                     voxel,
                                     &self.voxel_color_palette,
                                     &self.voxel_data_palette,
@@ -162,17 +162,17 @@ impl<
                                         index_in_matrix.z as usize,
                                         self.brick_dim as usize,
                                     );
-                                    NodeContent::pix_points_to_empty(
+                                    VoxelContent::pix_points_to_empty(
                                         &brick[index_in_matrix],
                                         &self.voxel_color_palette,
                                         &self.voxel_data_palette,
                                     )
                                 }
                             },
-                            NodeContent::Leaf(bricks) => {
+                            VoxelContent::Leaf(bricks) => {
                                 match &bricks[target_child_sectant as usize] {
                                     BrickData::Empty => true,
-                                    BrickData::Solid(voxel) => NodeContent::pix_points_to_empty(
+                                    BrickData::Solid(voxel) => VoxelContent::pix_points_to_empty(
                                         voxel,
                                         &self.voxel_color_palette,
                                         &self.voxel_data_palette,
@@ -186,7 +186,7 @@ impl<
                                             index_in_matrix.z as usize,
                                             self.brick_dim as usize,
                                         );
-                                        NodeContent::pix_points_to_empty(
+                                        VoxelContent::pix_points_to_empty(
                                             &brick[index_in_matrix],
                                             &self.voxel_color_palette,
                                             &self.voxel_data_palette,
@@ -287,7 +287,7 @@ impl<
 
             let previous_occupied_bits = self.stored_occupied_bits(node_key as usize);
             let mut new_occupied_bits =
-                if let NodeChildren::NoChildren = self.node_children[node_key as usize] {
+                if let VoxelChildren::NoChildren = self.node_children[node_key as usize] {
                     0
                 } else {
                     previous_occupied_bits
@@ -315,9 +315,9 @@ impl<
             *self.nodes.get_mut(node_key as usize) = if 0 != new_occupied_bits
                 && matches!(
                     self.node_children[node_key as usize],
-                    NodeChildren::Children(_)
+                    VoxelChildren::Children(_)
                 ) {
-                NodeContent::Internal(new_occupied_bits)
+                VoxelContent::Internal(new_occupied_bits)
             } else {
                 // Occupied bits depleted to 0x0
                 debug_assert_eq!(
@@ -328,13 +328,13 @@ impl<
                     "Expected empty node to have no valid children!"
                 );
                 self.deallocate_children_of(node_key as usize);
-                self.node_children[node_key as usize] = NodeChildren::NoChildren;
+                self.node_children[node_key as usize] = VoxelChildren::NoChildren;
                 removed_node = Some(node_key);
-                NodeContent::Nothing
+                VoxelContent::Nothing
             };
             debug_assert!(
                 0 != new_occupied_bits
-                    || matches!(self.nodes.get(node_key as usize), NodeContent::Nothing),
+                    || matches!(self.nodes.get(node_key as usize), VoxelContent::Nothing),
                 "Occupied bits doesn't match node[{:?}]: {:?} <> {:?}\nnode children: {:?}",
                 node_key,
                 new_occupied_bits,
@@ -343,7 +343,7 @@ impl<
             );
 
             if 0 == new_occupied_bits {
-                self.node_children[node_key as usize] = NodeChildren::NoChildren;
+                self.node_children[node_key as usize] = VoxelChildren::NoChildren;
             } else {
                 self.store_occupied_bits(node_key as usize, new_occupied_bits);
             }
