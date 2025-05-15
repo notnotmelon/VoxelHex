@@ -7,7 +7,7 @@ mod tests;
 use crate::{
     contree::{
         child_sectant_for,
-        types::{ContreeEntry, ChunkData, VoxelChildren, VoxelContent, PaletteIndexValues},
+        types::{ContreeEntry, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
         Albedo, Contree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -156,8 +156,8 @@ impl<
     //   ░░░░░░░░   ░░░░░        ░░░░░░░░░░   ░░░░░   ░░░░░    ░░░░░    ░░░░░░░░░░
     //####################################################################################
     /// Updates the given node to be a Leaf, and inserts the provided data for it.
-    /// It will update a whole node, or maximum one chunk. Chunk update range is starting from the position,
-    /// goes up to the extent of the chunk. Does not set occupancy bitmap of the given node.
+    /// It will update a whole node, or maximum one brick. Brick update range is starting from the position,
+    /// goes up to the extent of the brick. Does not set occupancy bitmap of the given node.
     /// * Returns with the size of the actual update
     pub(crate) fn leaf_update(
         &mut self,
@@ -171,33 +171,33 @@ impl<
         target_content: PaletteIndexValues,
     ) -> usize {
         // Update the leaf node, if it is possible as is, and if it's even needed to update
-        // and decide if the node content needs to be divided into chunks, and the update function to be called again
+        // and decide if the node content needs to be divided into bricks, and the update function to be called again
         match self.nodes.get_mut(node_key) {
-            VoxelContent::Leaf(chunks) => {
-                // In case chunk_dimension == contree size, the 0 can not be a leaf...
-                debug_assert!(self.chunk_dim < self.contree_size);
-                match &mut chunks[target_child_sectant] {
-                    //If there is no chunk in the target position of the leaf, create one
-                    ChunkData::Empty => {
-                        // Create a new empty chunk at the given sectant
-                        let mut new_chunk = vec![
+            VoxelContent::Leaf(bricks) => {
+                // In case brick_dimension == contree size, the 0 can not be a leaf...
+                debug_assert!(self.brick_dim < self.contree_size);
+                match &mut bricks[target_child_sectant] {
+                    //If there is no brick in the target position of the leaf, create one
+                    BrickData::Empty => {
+                        // Create a new empty brick at the given sectant
+                        let mut new_brick = vec![
                             empty_marker::<PaletteIndexValues>();
-                            self.chunk_dim.pow(3) as usize
+                            self.brick_dim.pow(3) as usize
                         ];
-                        // update the new empty chunk at the given position
-                        let update_size = Self::update_chunk(
+                        // update the new empty brick at the given position
+                        let update_size = Self::update_brick(
                             overwrite_if_empty,
-                            &mut new_chunk,
+                            &mut new_brick,
                             target_bounds,
-                            self.chunk_dim,
+                            self.brick_dim,
                             *position,
                             size,
                             &target_content,
                         );
-                        chunks[target_child_sectant] = ChunkData::Parted(new_chunk);
+                        bricks[target_child_sectant] = BrickData::Parted(new_brick);
                         update_size
                     }
-                    ChunkData::Solid(voxel) => {
+                    BrickData::Solid(voxel) => {
                         // In case the data doesn't match the current contents of the node, it needs to be subdivided
                         let update_size;
                         if (VoxelContent::pix_points_to_empty(
@@ -214,31 +214,31 @@ impl<
                             &self.voxel_data_palette,
                         ) && *voxel != target_content)
                         {
-                            // create new chunk and update it at the given position
-                            let mut new_chunk = vec![*voxel; self.chunk_dim.pow(3) as usize];
-                            update_size = Self::update_chunk(
+                            // create new brick and update it at the given position
+                            let mut new_brick = vec![*voxel; self.brick_dim.pow(3) as usize];
+                            update_size = Self::update_brick(
                                 overwrite_if_empty,
-                                &mut new_chunk,
+                                &mut new_brick,
                                 target_bounds,
-                                self.chunk_dim,
+                                self.brick_dim,
                                 *position,
                                 size,
                                 &target_content,
                             );
-                            chunks[target_child_sectant] = ChunkData::Parted(new_chunk);
+                            bricks[target_child_sectant] = BrickData::Parted(new_brick);
                         } else {
                             // Since the Voxel already equals the data to be set, no need to update anything
                             update_size = 0;
                         }
                         update_size
                     }
-                    ChunkData::Parted(chunk) => {
-                        // Simply update the chunk at the given position
-                        Self::update_chunk(
+                    BrickData::Parted(brick) => {
+                        // Simply update the brick at the given position
+                        Self::update_brick(
                             overwrite_if_empty,
-                            chunk,
+                            brick,
                             target_bounds,
-                            self.chunk_dim,
+                            self.brick_dim,
                             *position,
                             size,
                             &target_content,
@@ -248,7 +248,7 @@ impl<
             }
             VoxelContent::UniformLeaf(ref mut mat) => {
                 match mat {
-                    ChunkData::Empty => {
+                    BrickData::Empty => {
                         debug_assert_eq!(
                             self.node_children[node_key],
                             VoxelChildren::OccupancyBitmap(0),
@@ -260,32 +260,32 @@ impl<
                             &self.voxel_color_palette,
                             &self.voxel_data_palette,
                         ) {
-                            let mut new_leaf_content: [ChunkData;
+                            let mut new_leaf_content: [BrickData;
                                 BOX_NODE_CHILDREN_COUNT] =
-                                vec![ChunkData::Empty; BOX_NODE_CHILDREN_COUNT]
+                                vec![BrickData::Empty; BOX_NODE_CHILDREN_COUNT]
                                     .try_into()
                                     .unwrap();
 
-                            // Add a chunk to the target sectant and update with the given data
-                            let mut new_chunk = vec![
+                            // Add a brick to the target sectant and update with the given data
+                            let mut new_brick = vec![
                                 self.add_to_palette(&ContreeEntry::Empty);
-                                self.chunk_dim.pow(3) as usize
+                                self.brick_dim.pow(3) as usize
                             ];
-                            let update_size = Self::update_chunk(
+                            let update_size = Self::update_brick(
                                 overwrite_if_empty,
-                                &mut new_chunk,
+                                &mut new_brick,
                                 target_bounds,
-                                self.chunk_dim,
+                                self.brick_dim,
                                 *position,
                                 size,
                                 &target_content,
                             );
-                            new_leaf_content[target_child_sectant] = ChunkData::Parted(new_chunk);
+                            new_leaf_content[target_child_sectant] = BrickData::Parted(new_brick);
                             *self.nodes.get_mut(node_key) = VoxelContent::Leaf(new_leaf_content);
                             return update_size;
                         }
                     }
-                    ChunkData::Solid(voxel) => {
+                    BrickData::Solid(voxel) => {
                         debug_assert!(
                             !VoxelContent::pix_points_to_empty(voxel, &self.voxel_color_palette, &self.voxel_data_palette)
                                 && (self.node_children[node_key]
@@ -293,7 +293,7 @@ impl<
                                 || VoxelContent::pix_points_to_empty(voxel, &self.voxel_color_palette, &self.voxel_data_palette)
                                     && (self.node_children[node_key]
                                         == VoxelChildren::OccupancyBitmap(0)),
-                            "Expected Node occupancy bitmap({:?}) to align for Solid Voxel Chunk in Uniform Leaf, which is {}",
+                            "Expected Node occupancy bitmap({:?}) to align for Solid Voxel Brick in Uniform Leaf, which is {}",
                             self.node_children[node_key],
                             if VoxelContent::pix_points_to_empty(voxel, &self.voxel_color_palette, &self.voxel_data_palette) {
                                 "empty"
@@ -334,10 +334,10 @@ impl<
                             ))
                         {
                             // Data request doesn't align with the voxel data
-                            // create a voxel chunk and try to update with the given data
-                            *mat = ChunkData::Parted(vec![
+                            // create a voxel brick and try to update with the given data
+                            *mat = BrickData::Parted(vec![
                                 *voxel;
-                                (self.chunk_dim * self.chunk_dim * self.chunk_dim)
+                                (self.brick_dim * self.brick_dim * self.brick_dim)
                                     as usize
                             ]);
 
@@ -356,19 +356,19 @@ impl<
                         // data request aligns with node content
                         return 0;
                     }
-                    ChunkData::Parted(chunk) => {
+                    BrickData::Parted(brick) => {
                         // Check if the voxel at the target position matches with the data update request
                         // The target position index is to be calculated from the node bounds,
                         // instead of the target bounds because the position should cover the whole leaf
-                        // not just one chunk in it
-                        let mat_index = matrix_index_for(node_bounds, position, self.chunk_dim);
+                        // not just one brick in it
+                        let mat_index = matrix_index_for(node_bounds, position, self.brick_dim);
                         let mat_index = flat_projection(
                             mat_index.x,
                             mat_index.y,
                             mat_index.z,
-                            self.chunk_dim as usize,
+                            self.brick_dim as usize,
                         );
-                        if 1 < self.chunk_dim // ChunkData can only stay parted if chunk_dimension is above 1
+                        if 1 < self.brick_dim // BrickData can only stay parted if brick_dimension is above 1
                             && (
                                 (
                                     VoxelContent::pix_points_to_empty(
@@ -377,7 +377,7 @@ impl<
                                         &self.voxel_data_palette,
                                     )
                                     && VoxelContent::pix_points_to_empty(
-                                        &chunk[mat_index],
+                                        &brick[mat_index],
                                         &self.voxel_color_palette,
                                         &self.voxel_data_palette
                                     )
@@ -387,7 +387,7 @@ impl<
                                         &self.voxel_color_palette,
                                         &self.voxel_data_palette,
                                     )
-                                    && chunk[mat_index] == target_content
+                                    && brick[mat_index] == target_content
                                 )
                             )
                         {
@@ -395,45 +395,45 @@ impl<
                             return 0;
                         }
 
-                        // If uniform leaf is the size of one chunk, the chunk is updated as is
-                        if node_bounds.size <= self.chunk_dim as f32 && self.chunk_dim > 1 {
-                            return Self::update_chunk(
+                        // If uniform leaf is the size of one brick, the brick is updated as is
+                        if node_bounds.size <= self.brick_dim as f32 && self.brick_dim > 1 {
+                            return Self::update_brick(
                                 overwrite_if_empty,
-                                chunk,
+                                brick,
                                 node_bounds,
-                                self.chunk_dim,
+                                self.brick_dim,
                                 *position,
                                 size,
                                 &target_content,
                             );
                         }
 
-                        // the data at the position inside the chunk doesn't match the given data,
-                        // so the leaf needs to be divided into a NodeContent::Leaf(chunks)
-                        let mut leaf_data: [ChunkData;
+                        // the data at the position inside the brick doesn't match the given data,
+                        // so the leaf needs to be divided into a NodeContent::Leaf(bricks)
+                        let mut leaf_data: [BrickData;
                             BOX_NODE_CHILDREN_COUNT] =
-                            vec![ChunkData::Empty; BOX_NODE_CHILDREN_COUNT]
+                            vec![BrickData::Empty; BOX_NODE_CHILDREN_COUNT]
                                 .try_into()
                                 .unwrap();
 
-                        // Each chunk is mapped to take up one subsection of the current data
-                        let child_chunks =
-                            Self::dilute_chunk_data(std::mem::take(chunk), self.chunk_dim);
+                        // Each brick is mapped to take up one subsection of the current data
+                        let child_bricks =
+                            Self::dilute_brick_data(std::mem::take(brick), self.brick_dim);
                         let mut update_size = 0;
-                        for (sectant, mut new_chunk) in child_chunks.into_iter().enumerate() {
-                            // Also update the chunk if it is the target
+                        for (sectant, mut new_brick) in child_bricks.into_iter().enumerate() {
+                            // Also update the brick if it is the target
                             if sectant == target_child_sectant {
-                                update_size = Self::update_chunk(
+                                update_size = Self::update_brick(
                                     overwrite_if_empty,
-                                    &mut new_chunk,
+                                    &mut new_brick,
                                     target_bounds,
-                                    self.chunk_dim,
+                                    self.brick_dim,
                                     *position,
                                     size,
                                     &target_content,
                                 );
                             }
-                            leaf_data[sectant] = ChunkData::Parted(new_chunk);
+                            leaf_data[sectant] = BrickData::Parted(new_brick);
                         }
 
                         *self.nodes.get_mut(node_key) = VoxelContent::Leaf(leaf_data);
@@ -461,7 +461,7 @@ impl<
                 *self.nodes.get_mut(node_key) = VoxelContent::Leaf(
                     (0..BOX_NODE_CHILDREN_COUNT)
                         .map(|sectant| {
-                            self.try_chunk_from_node(
+                            self.try_brick_from_node(
                                 self.node_children[node_key].child(sectant as u8),
                             )
                         })
@@ -488,7 +488,7 @@ impl<
                 *self.nodes.get_mut(node_key) = VoxelContent::Leaf(
                     (0..BOX_NODE_CHILDREN_COUNT)
                         .map(|sectant| {
-                            self.try_chunk_from_node(
+                            self.try_brick_from_node(
                                 self.node_children[node_key].child(sectant as u8),
                             )
                         })
@@ -538,8 +538,8 @@ impl<
                     let target_child_sectant = child_sectant_for(node_bounds, &shifted_position);
                     let target_bounds = node_bounds.child_bounds_for(target_child_sectant);
 
-                    // In case smaller chunk dimensions, it might happen that one update affects multiple sectants
-                    // e.g. when a uniform leaf has a parted chunk of 2x2x2 --> Setting a value in one element
+                    // In case smaller brick dimensions, it might happen that one update affects multiple sectants
+                    // e.g. when a uniform leaf has a parted brick of 2x2x2 --> Setting a value in one element
                     // affects multiple sectants. In these cases, the target size is 0.5, and positions
                     // also move inbetween voxels. Logically this is needed for e.g. setting the correct occupied bits
                     // for a given node. The worst case scenario is some cells are given a value multiple times,
@@ -596,45 +596,45 @@ impl<
     //  ███████████  █████   █████ █████ ░░█████████  █████ ░░████
     // ░░░░░░░░░░░  ░░░░░   ░░░░░ ░░░░░   ░░░░░░░░░  ░░░░░   ░░░░
     //####################################################################################
-    /// Provides an array of chunks, based on the given chunk data, with the same size of the original chunk,
-    /// each voxel mapped as the new chunks were the children of the given chunk
-    pub(crate) fn dilute_chunk_data<B>(
-        chunk_data: Vec<B>,
-        chunk_dim: u32,
+    /// Provides an array of bricks, based on the given brick data, with the same size of the original brick,
+    /// each voxel mapped as the new bricks were the children of the given brick
+    pub(crate) fn dilute_brick_data<B>(
+        brick_data: Vec<B>,
+        brick_dim: u32,
     ) -> [Vec<B>; BOX_NODE_CHILDREN_COUNT]
     where
         B: Debug + Clone + Copy + PartialEq,
     {
-        debug_assert_eq!(chunk_data.len(), chunk_dim.pow(3) as usize);
+        debug_assert_eq!(brick_data.len(), brick_dim.pow(3) as usize);
 
-        if 1 == chunk_dim {
-            debug_assert_eq!(chunk_data.len(), 1);
-            return vec![chunk_data.clone(); BOX_NODE_CHILDREN_COUNT]
+        if 1 == brick_dim {
+            debug_assert_eq!(brick_data.len(), 1);
+            return vec![brick_data.clone(); BOX_NODE_CHILDREN_COUNT]
                 .try_into()
                 .unwrap();
         }
 
-        if 2 == chunk_dim {
-            debug_assert_eq!(chunk_data.len(), 8);
+        if 2 == brick_dim {
+            debug_assert_eq!(brick_data.len(), 8);
             return (0..BOX_NODE_CHILDREN_COUNT)
                 .map(|sectant| {
-                    vec![chunk_data[octant_in_sectants(sectant)]; chunk_dim.pow(3) as usize]
+                    vec![brick_data[octant_in_sectants(sectant)]; brick_dim.pow(3) as usize]
                 })
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap();
         };
 
-        debug_assert!(chunk_data.len() <= BOX_NODE_CHILDREN_COUNT);
+        debug_assert!(brick_data.len() <= BOX_NODE_CHILDREN_COUNT);
         let mut result: [Vec<B>; BOX_NODE_CHILDREN_COUNT] = (0..BOX_NODE_CHILDREN_COUNT)
-            .map(|sectant| vec![chunk_data[sectant]; chunk_dim.pow(3) as usize])
+            .map(|sectant| vec![brick_data[sectant]; brick_dim.pow(3) as usize])
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
 
-        // in case one child can be mapped 1:1 to an element in the chunk
-        if 4 == chunk_dim {
-            debug_assert_eq!(chunk_data.len(), BOX_NODE_CHILDREN_COUNT);
+        // in case one child can be mapped 1:1 to an element in the brick
+        if 4 == brick_dim {
+            debug_assert_eq!(brick_data.len(), BOX_NODE_CHILDREN_COUNT);
             return result;
         }
 
@@ -642,80 +642,80 @@ impl<
         // Note: Each value in @result will be overwritten
         for sectant in 0..BOX_NODE_CHILDREN_COUNT {
             // Set the data of the new child
-            let chunk_offset: V3c<usize> =
-                V3c::from(SECTANT_OFFSET_LUT[sectant] * chunk_dim as f32);
-            let new_chunk_flat_offset = flat_projection(
-                chunk_offset.x,
-                chunk_offset.y,
-                chunk_offset.z,
-                chunk_dim as usize,
+            let brick_offset: V3c<usize> =
+                V3c::from(SECTANT_OFFSET_LUT[sectant] * brick_dim as f32);
+            let new_brick_flat_offset = flat_projection(
+                brick_offset.x,
+                brick_offset.y,
+                brick_offset.z,
+                brick_dim as usize,
             );
-            let mut new_chunk_data =
-                vec![chunk_data[new_chunk_flat_offset]; chunk_dim.pow(3) as usize];
-            for x in 0..chunk_dim as usize {
-                for y in 0..chunk_dim as usize {
-                    for z in 0..chunk_dim as usize {
+            let mut new_brick_data =
+                vec![brick_data[new_brick_flat_offset]; brick_dim.pow(3) as usize];
+            for x in 0..brick_dim as usize {
+                for y in 0..brick_dim as usize {
+                    for z in 0..brick_dim as usize {
                         if x < BOX_NODE_DIMENSION
                             && y < BOX_NODE_DIMENSION
                             && z < BOX_NODE_DIMENSION
                         {
                             continue;
                         }
-                        let new_chunk_flat_offset = flat_projection(x, y, z, chunk_dim as usize);
-                        let chunk_flat_offset = flat_projection(
-                            chunk_offset.x + x / BOX_NODE_DIMENSION,
-                            chunk_offset.y + y / BOX_NODE_DIMENSION,
-                            chunk_offset.z + z / BOX_NODE_DIMENSION,
-                            chunk_dim as usize,
+                        let new_brick_flat_offset = flat_projection(x, y, z, brick_dim as usize);
+                        let brick_flat_offset = flat_projection(
+                            brick_offset.x + x / BOX_NODE_DIMENSION,
+                            brick_offset.y + y / BOX_NODE_DIMENSION,
+                            brick_offset.z + z / BOX_NODE_DIMENSION,
+                            brick_dim as usize,
                         );
-                        new_chunk_data[new_chunk_flat_offset] = chunk_data[chunk_flat_offset];
+                        new_brick_data[new_brick_flat_offset] = brick_data[brick_flat_offset];
                     }
                 }
             }
-            result[sectant] = new_chunk_data;
+            result[sectant] = new_brick_data;
         }
         result
     }
 
-    /// Updates the content of the given chunk and its occupancy bitmap. Each components of mat_index must be smaller, than the size of the chunk.
-    /// mat_index + size however need not be in bounds, the function will cut each component to fit inside the chunk.
-    /// * `chunk` - mutable reference of the chunk to update
+    /// Updates the content of the given brick and its occupancy bitmap. Each components of mat_index must be smaller, than the size of the brick.
+    /// mat_index + size however need not be in bounds, the function will cut each component to fit inside the brick.
+    /// * `brick` - mutable reference of the brick to update
     /// * `mat_index` - the first position to update with the given data
     /// * `size` - the number of elements in x,y,z to update with the given data
-    /// * `data` - the data  to update the chunk with. Erases data in case `None`
+    /// * `data` - the data  to update the brick with. Erases data in case `None`
     /// * Returns with the size of the update
-    fn update_chunk(
+    fn update_brick(
         overwrite_if_empty: bool,
-        chunk: &mut [PaletteIndexValues],
-        chunk_bounds: &Cube,
-        chunk_dim: u32,
+        brick: &mut [PaletteIndexValues],
+        brick_bounds: &Cube,
+        brick_dim: u32,
         position: V3c<u32>,
         size: u32,
         data: &PaletteIndexValues,
     ) -> usize {
         debug_assert!(
-            chunk_bounds.contains(&(position.into())),
-            "Expected position {:?} to be contained in chunk bounds {:?}",
+            brick_bounds.contains(&(position.into())),
+            "Expected position {:?} to be contained in brick bounds {:?}",
             position,
-            chunk_bounds
+            brick_bounds
         );
 
-        let mat_index = matrix_index_for(chunk_bounds, &position, chunk_dim);
-        let update_size = (chunk_dim as usize - mat_index.x).min(size as usize);
-        for x in mat_index.x..(mat_index.x + size as usize).min(chunk_dim as usize) {
-            for y in mat_index.y..(mat_index.y + size as usize).min(chunk_dim as usize) {
-                for z in mat_index.z..(mat_index.z + size as usize).min(chunk_dim as usize) {
-                    let mat_index = flat_projection(x, y, z, chunk_dim as usize);
+        let mat_index = matrix_index_for(brick_bounds, &position, brick_dim);
+        let update_size = (brick_dim as usize - mat_index.x).min(size as usize);
+        for x in mat_index.x..(mat_index.x + size as usize).min(brick_dim as usize) {
+            for y in mat_index.y..(mat_index.y + size as usize).min(brick_dim as usize) {
+                for z in mat_index.z..(mat_index.z + size as usize).min(brick_dim as usize) {
+                    let mat_index = flat_projection(x, y, z, brick_dim as usize);
                     if overwrite_if_empty {
-                        chunk[mat_index] = *data;
+                        brick[mat_index] = *data;
                     } else {
                         if VoxelContent::pix_color_is_some(data) {
-                            chunk[mat_index] =
-                                VoxelContent::pix_overwrite_color(chunk[mat_index], data);
+                            brick[mat_index] =
+                                VoxelContent::pix_overwrite_color(brick[mat_index], data);
                         }
                         if VoxelContent::pix_data_is_some(data) {
-                            chunk[mat_index] =
-                                VoxelContent::pix_overwrite_data(chunk[mat_index], data);
+                            brick[mat_index] =
+                                VoxelContent::pix_overwrite_data(brick[mat_index], data);
                         }
                     }
                 }
@@ -757,7 +757,7 @@ impl<
 
             match self.nodes.get_mut(node_key) {
                 VoxelContent::Nothing => true,
-                VoxelContent::UniformLeaf(chunk) => {
+                VoxelContent::UniformLeaf(brick) => {
                     debug_assert!(
                         matches!(
                             self.node_children[node_key],
@@ -766,9 +766,9 @@ impl<
                         "Uniform leaf has {:?} instead of an Occupancy_bitmap(_)",
                         self.node_children[node_key]
                     );
-                    match chunk {
-                        ChunkData::Empty => true,
-                        ChunkData::Solid(voxel) => {
+                    match brick {
+                        BrickData::Empty => true,
+                        BrickData::Solid(voxel) => {
                             if VoxelContent::pix_points_to_empty(
                                 voxel,
                                 &self.voxel_color_palette,
@@ -817,14 +817,14 @@ impl<
                                 false
                             }
                         }
-                        ChunkData::Parted(_chunk) => {
-                            if chunk.simplify(&self.voxel_color_palette, &self.voxel_data_palette) {
+                        BrickData::Parted(_brick) => {
+                            if brick.simplify(&self.voxel_color_palette, &self.voxel_data_palette) {
                                 debug_assert!(
                                     self.node_children[node_key]
                                         == VoxelChildren::OccupancyBitmap(u64::MAX)
                                         || self.node_children[node_key]
                                             == VoxelChildren::OccupancyBitmap(0),
-                                    "Expected chunk occuped bits( inside {:?}) to be either full or empty, becasue it could be simplified",
+                                    "Expected brick occuped bits( inside {:?}) to be either full or empty, becasue it could be simplified",
                                     self.node_children[node_key]
                                 );
                                 true
@@ -834,14 +834,14 @@ impl<
                         }
                     }
                 }
-                VoxelContent::Leaf(chunks) => {
+                VoxelContent::Leaf(bricks) => {
                     #[cfg(debug_assertions)]
                     {
-                        for (sectant, chunk) in
-                            chunks.iter().enumerate().take(BOX_NODE_CHILDREN_COUNT)
+                        for (sectant, brick) in
+                            bricks.iter().enumerate().take(BOX_NODE_CHILDREN_COUNT)
                         {
-                            if let ChunkData::Solid(_) | ChunkData::Empty = chunk {
-                                // with solid and empty chunks, the relevant occupied bits should either be empty or full
+                            if let BrickData::Solid(_) | BrickData::Empty = brick {
+                                // with solid and empty bricks, the relevant occupied bits should either be empty or full
                                 if let VoxelChildren::OccupancyBitmap(occupied_bits) =
                                     self.node_children[node_key]
                                 {
@@ -849,8 +849,8 @@ impl<
                                     debug_assert!(
                                         0 == occupied_bits & sectant_bitmask
                                             || sectant_bitmask == occupied_bits & sectant_bitmask,
-                                        "Chunkdata at sectant[{:?}] doesn't match occupied bits: {:?} <> {:#10X}",
-                                        sectant, chunk, occupied_bits,
+                                        "Brickdata at sectant[{:?}] doesn't match occupied bits: {:?} <> {:#10X}",
+                                        sectant, brick, occupied_bits,
                                     );
                                 }
                             }
@@ -866,17 +866,17 @@ impl<
                         self.node_children[node_key]
                     );
 
-                    // Try to simplify chunks
+                    // Try to simplify bricks
                     let mut simplified = false;
                     let mut is_leaf_uniform_solid = true;
                     let mut uniform_solid_value = None;
 
-                    for chunk in chunks.iter_mut().take(BOX_NODE_CHILDREN_COUNT) {
+                    for brick in bricks.iter_mut().take(BOX_NODE_CHILDREN_COUNT) {
                         simplified |=
-                            chunk.simplify(&self.voxel_color_palette, &self.voxel_data_palette);
+                            brick.simplify(&self.voxel_color_palette, &self.voxel_data_palette);
 
                         if is_leaf_uniform_solid {
-                            if let ChunkData::Solid(voxel) = chunk {
+                            if let BrickData::Solid(voxel) = brick {
                                 if let Some(ref uniform_solid_value) = uniform_solid_value {
                                     if *uniform_solid_value != voxel {
                                         is_leaf_uniform_solid = false;
@@ -890,8 +890,8 @@ impl<
                         }
                     }
 
-                    // Try to unite chunks into a solid chunk
-                    let mut unified_chunk = ChunkData::Empty;
+                    // Try to unite bricks into a solid brick
+                    let mut unified_brick = BrickData::Empty;
                     if is_leaf_uniform_solid {
                         debug_assert_ne!(uniform_solid_value, None);
                         debug_assert_eq!(
@@ -899,98 +899,98 @@ impl<
                             VoxelChildren::OccupancyBitmap(u64::MAX),
                             "Expected Leaf with uniform solid value to have u64::MAX value"
                         );
-                        *self.nodes.get_mut(node_key) = VoxelContent::UniformLeaf(ChunkData::Solid(
+                        *self.nodes.get_mut(node_key) = VoxelContent::UniformLeaf(BrickData::Solid(
                             *uniform_solid_value.unwrap(),
                         ));
                         return true;
                     }
 
-                    // Do not try to unite chunks into a uniform chunk
+                    // Do not try to unite bricks into a uniform brick
                     // since contents are not solid, it is not unifyable
-                    // into a 1x1x1 chunk ( that's equivalent to a solid chunk )
-                    if self.chunk_dim == 1 {
+                    // into a 1x1x1 brick ( that's equivalent to a solid brick )
+                    if self.brick_dim == 1 {
                         return false;
                     }
 
-                    // Try to unite chunks into a Uniform parted chunk
-                    let mut unified_chunk_data =
-                        vec![empty_marker::<PaletteIndexValues>(); self.chunk_dim.pow(3) as usize];
+                    // Try to unite bricks into a Uniform parted brick
+                    let mut unified_brick_data =
+                        vec![empty_marker::<PaletteIndexValues>(); self.brick_dim.pow(3) as usize];
                     let mut is_leaf_uniform = true;
-                    const CHUNK_CELL_SIZE: usize = BOX_NODE_DIMENSION;
-                    let superchunk_size = self.chunk_dim as f32 * BOX_NODE_DIMENSION as f32;
-                    'chunk_process: for x in 0..self.chunk_dim {
-                        for y in 0..self.chunk_dim {
-                            for z in 0..self.chunk_dim {
+                    const BRICK_CELL_SIZE: usize = BOX_NODE_DIMENSION;
+                    let superbrick_size = self.brick_dim as f32 * BOX_NODE_DIMENSION as f32;
+                    'brick_process: for x in 0..self.brick_dim {
+                        for y in 0..self.brick_dim {
+                            for z in 0..self.brick_dim {
                                 let cell_start =
-                                    V3c::new(x as f32, y as f32, z as f32) * CHUNK_CELL_SIZE as f32;
+                                    V3c::new(x as f32, y as f32, z as f32) * BRICK_CELL_SIZE as f32;
                                 let ref_sectant =
-                                    offset_sectant(&cell_start, superchunk_size) as usize;
+                                    offset_sectant(&cell_start, superbrick_size) as usize;
                                 let pos_in_child =
-                                    cell_start - SECTANT_OFFSET_LUT[ref_sectant] * superchunk_size;
-                                let ref_voxel = match &chunks[ref_sectant] {
-                                    ChunkData::Empty => empty_marker(),
-                                    ChunkData::Solid(voxel) => *voxel,
-                                    ChunkData::Parted(chunk) => {
-                                        chunk[flat_projection(
+                                    cell_start - SECTANT_OFFSET_LUT[ref_sectant] * superbrick_size;
+                                let ref_voxel = match &bricks[ref_sectant] {
+                                    BrickData::Empty => empty_marker(),
+                                    BrickData::Solid(voxel) => *voxel,
+                                    BrickData::Parted(brick) => {
+                                        brick[flat_projection(
                                             pos_in_child.x as usize,
                                             pos_in_child.y as usize,
                                             pos_in_child.z as usize,
-                                            self.chunk_dim as usize,
+                                            self.brick_dim as usize,
                                         )]
                                     }
                                 };
 
-                                for cx in 0..CHUNK_CELL_SIZE {
-                                    for cy in 0..CHUNK_CELL_SIZE {
-                                        for cz in 0..CHUNK_CELL_SIZE {
+                                for cx in 0..BRICK_CELL_SIZE {
+                                    for cy in 0..BRICK_CELL_SIZE {
+                                        for cz in 0..BRICK_CELL_SIZE {
                                             if !is_leaf_uniform {
-                                                break 'chunk_process;
+                                                break 'brick_process;
                                             }
                                             let pos = cell_start
                                                 + V3c::new(cx as f32, cy as f32, cz as f32);
                                             let sectant =
-                                                offset_sectant(&pos, superchunk_size) as usize;
+                                                offset_sectant(&pos, superbrick_size) as usize;
                                             let pos_in_child =
-                                                pos - SECTANT_OFFSET_LUT[sectant] * superchunk_size;
+                                                pos - SECTANT_OFFSET_LUT[sectant] * superbrick_size;
 
-                                            is_leaf_uniform &= match &chunks[sectant] {
-                                                ChunkData::Empty => {
+                                            is_leaf_uniform &= match &bricks[sectant] {
+                                                BrickData::Empty => {
                                                     ref_voxel
                                                         == empty_marker::<PaletteIndexValues>()
                                                 }
-                                                ChunkData::Solid(voxel) => ref_voxel == *voxel,
-                                                ChunkData::Parted(chunk) => {
+                                                BrickData::Solid(voxel) => ref_voxel == *voxel,
+                                                BrickData::Parted(brick) => {
                                                     ref_voxel
-                                                        == chunk[flat_projection(
+                                                        == brick[flat_projection(
                                                             pos_in_child.x as usize,
                                                             pos_in_child.y as usize,
                                                             pos_in_child.z as usize,
-                                                            self.chunk_dim as usize,
+                                                            self.brick_dim as usize,
                                                         )]
                                                 }
                                             };
                                         }
                                     }
                                 }
-                                // All voxel are the same in this cell! set value in unified chunk
-                                unified_chunk_data[flat_projection(
+                                // All voxel are the same in this cell! set value in unified brick
+                                unified_brick_data[flat_projection(
                                     x as usize,
                                     y as usize,
                                     z as usize,
-                                    self.chunk_dim as usize,
+                                    self.brick_dim as usize,
                                 )] = ref_voxel;
                             }
                         }
                     }
 
-                    // chunks can be represented as a uniform parted chunk matrix!
+                    // bricks can be represented as a uniform parted brick matrix!
                     if is_leaf_uniform {
-                        unified_chunk = ChunkData::Parted(unified_chunk_data);
+                        unified_brick = BrickData::Parted(unified_brick_data);
                         simplified = true;
                     }
 
-                    if !matches!(unified_chunk, ChunkData::Empty) {
-                        *self.nodes.get_mut(node_key) = VoxelContent::UniformLeaf(unified_chunk);
+                    if !matches!(unified_brick, BrickData::Empty) {
+                        *self.nodes.get_mut(node_key) = VoxelContent::UniformLeaf(unified_brick);
                     }
 
                     simplified

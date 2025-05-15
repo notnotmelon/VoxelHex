@@ -1,7 +1,7 @@
 use crate::{
     contree::{
         detail::child_sectant_for,
-        types::{ContreeEntry, ChunkData, VoxelChildren, VoxelContent, ContreeError},
+        types::{ContreeEntry, BrickData, VoxelChildren, VoxelContent, ContreeError},
         Contree, VoxelData, BOX_NODE_DIMENSION,
     },
     spatial::{
@@ -60,7 +60,7 @@ impl<
     /// Inserts the given data for the contree in the given lod(level of detail) based on insert_size
     /// If there is already available data it overwrites it, except if all components are empty
     /// * `position` - the position to insert the data into, must be contained within the tree
-    /// * `insert_size` - The size to update. The value `chunk_dimension * (2^x)` is used instead, when size is higher, than chunk_dimension
+    /// * `insert_size` - The size to update. The value `brick_dimension * (2^x)` is used instead, when size is higher, than brick_dimension
     /// * `data` - The data to insert - cloned if needed
     pub fn insert_at_lod<'a, E: Into<ContreeEntry<'a, T>>>(
         &mut self,
@@ -177,13 +177,13 @@ impl<
                             if self.nodes.key_is_valid(target_child_key) {
                                 self.deallocate_children_of(target_child_key);
                                 *self.nodes.get_mut(target_child_key) =
-                                    VoxelContent::UniformLeaf(ChunkData::Solid(target_content));
+                                    VoxelContent::UniformLeaf(BrickData::Solid(target_content));
                                 self.node_children[target_child_key as usize] =
                                     VoxelChildren::OccupancyBitmap(u64::MAX);
                             } else {
                                 // Push in a new uniform leaf child
                                 let new_child_index = self.nodes.push(VoxelContent::UniformLeaf(
-                                    ChunkData::Solid(target_content),
+                                    BrickData::Solid(target_content),
                                 )) as u32;
                                 self.node_children.resize(
                                     self.node_children.len().max(new_child_index as usize + 1),
@@ -203,10 +203,10 @@ impl<
             }
 
             // iteration needs to go deeper, as current node is not a leaf,
-            // and target size is still larger, than chunk dimension.
+            // and target size is still larger, than brick dimension.
             // The whole node can't be overwritten because that case was handled before this
             if target_bounds.size > 1.
-                && (target_bounds.size > self.chunk_dim as f32
+                && (target_bounds.size > self.brick_dim as f32
                     || self.nodes.key_is_valid(target_child_key))
             {
                 // the child at the queried position exists and valid, recurse into it
@@ -226,41 +226,41 @@ impl<
                         // filled with the data stored in NodeContent::*Leaf(_)
                         let target_match = match self.nodes.get(current_node_key) {
                             VoxelContent::Internal(_) | VoxelContent::Nothing => false,
-                            VoxelContent::UniformLeaf(chunk) => match chunk {
-                                ChunkData::Empty => false,
-                                ChunkData::Solid(voxel) => *voxel == target_content,
-                                ChunkData::Parted(chunk) => {
+                            VoxelContent::UniformLeaf(brick) => match brick {
+                                BrickData::Empty => false,
+                                BrickData::Solid(voxel) => *voxel == target_content,
+                                BrickData::Parted(brick) => {
                                     let index_in_matrix = matrix_index_for(
                                         &current_bounds,
                                         &(position.into()),
-                                        self.chunk_dim,
+                                        self.brick_dim,
                                     );
                                     let index_in_matrix = flat_projection(
                                         index_in_matrix.x,
                                         index_in_matrix.y,
                                         index_in_matrix.z,
-                                        self.chunk_dim as usize,
+                                        self.brick_dim as usize,
                                     );
-                                    chunk[index_in_matrix] == target_content
+                                    brick[index_in_matrix] == target_content
                                 }
                             },
-                            VoxelContent::Leaf(chunks) => {
-                                match &chunks[target_child_sectant as usize] {
-                                    ChunkData::Empty => false,
-                                    ChunkData::Solid(voxel) => *voxel == target_content,
-                                    ChunkData::Parted(chunk) => {
+                            VoxelContent::Leaf(bricks) => {
+                                match &bricks[target_child_sectant as usize] {
+                                    BrickData::Empty => false,
+                                    BrickData::Solid(voxel) => *voxel == target_content,
+                                    BrickData::Parted(brick) => {
                                         let index_in_matrix = matrix_index_for(
                                             &target_bounds,
                                             &(position.into()),
-                                            self.chunk_dim,
+                                            self.brick_dim,
                                         );
                                         let index_in_matrix = flat_projection(
                                             index_in_matrix.x,
                                             index_in_matrix.y,
                                             index_in_matrix.z,
-                                            self.chunk_dim as usize,
+                                            self.brick_dim as usize,
                                         );
-                                        chunk[index_in_matrix] == target_content
+                                        brick[index_in_matrix] == target_content
                                     }
                                 }
                             }

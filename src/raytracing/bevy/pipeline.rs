@@ -620,13 +620,13 @@ fn create_view_resources(
         usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
     });
 
-    // One element in the chunk metadata holds 16 chunks. See @OctreeRenderData
-    let chunk_size = (render_data.contree_meta.tree_properties & 0x0000FFFF).pow(3);
-    let chunk_element_count = (render_data.used_bits.len() * 31 * chunk_size as usize) as u64;
+    // One element in the brick metadata holds 16 bricks. See @OctreeRenderData
+    let brick_size = (render_data.contree_meta.tree_properties & 0x0000FFFF).pow(3);
+    let brick_element_count = (render_data.used_bits.len() * 31 * brick_size as usize) as u64;
     let one_voxel_byte_size = std::mem::size_of::<PaletteIndexValues>() as u64;
     let voxels_buffer = render_device.create_buffer(&BufferDescriptor {
         mapped_at_creation: false,
-        size: one_voxel_byte_size * chunk_element_count,
+        size: one_voxel_byte_size * brick_element_count,
         label: Some("BoxTree Voxels Buffer"),
         usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
     });

@@ -10,8 +10,8 @@ pub enum ContreeError {
     /// Octree creation was attempted with an invalid contree size
     InvalidSize(u32),
 
-    /// Octree creation was attempted with an invalid chunk dimension
-    InvalidChunkDimension(u32),
+    /// Octree creation was attempted with an invalid brick dimension
+    InvalidBrickDimension(u32),
 
     /// Octree creation was attempted with an invalid structure parameter ( refer to error )
     InvalidStructure(Box<dyn Error>),
@@ -37,14 +37,14 @@ pub enum ContreeEntry<'a, T: VoxelData> {
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum ChunkData {
-    /// Chunk is empty
+pub(crate) enum BrickData {
+    /// Brick is empty
     Empty,
 
-    /// Chunk is an NxNxN matrix, size is determined by the parent entity
+    /// Brick is an NxNxN matrix, size is determined by the parent entity
     Parted(Vec<PaletteIndexValues>),
 
-    /// Chunk is a single item T, which takes up the entirety of the chunk
+    /// Brick is a single item T, which takes up the entirety of the brick
     Solid(PaletteIndexValues),
 }
 
@@ -59,11 +59,11 @@ pub(crate) enum VoxelContent
     /// Internal node + cache data to store the occupancy of the enclosed nodes
     Internal(u64),
 
-    /// Node contains 64 children, each with their own chunkdata
-    Leaf([ChunkData; BOX_NODE_CHILDREN_COUNT]),
+    /// Node contains 64 children, each with their own brickdata
+    Leaf([BrickData; BOX_NODE_CHILDREN_COUNT]),
 
-    /// Node has one child, which takes up the entirety of the node with its chunk data
-    UniformLeaf(ChunkData),
+    /// Node has one child, which takes up the entirety of the node with its brick data
+    UniformLeaf(BrickData),
 }
 
 #[derive(Default, Copy, Clone, PartialEq, Eq)]
@@ -93,9 +93,9 @@ pub struct Albedo {
 
 pub(crate) type PaletteIndexValues = u32;
 
-/// Sparse 64Tree of Voxel Chunks, where each leaf node contains a chunk of voxels.
-/// A Chunk is a 3 dimensional matrix, each element of it containing a voxel.
-/// A Chunk can be indexed directly, as opposed to the contree which is essentially a
+/// Sparse 64Tree of Voxel Bricks, where each leaf node contains a brick of voxels.
+/// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
+/// A Brick can be indexed directly, as opposed to the contree which is essentially a
 /// tree-graph where each node has 64 children.
 #[cfg_attr(feature = "serialization", derive(Serialize))]
 #[derive(Clone)]
@@ -103,8 +103,8 @@ pub struct Contree<T = u32>
 where
     T: Default + Clone + Eq + Hash,
 {
-    /// Size of one chunk in a leaf node (dim^3)
-    pub(crate) chunk_dim: u32,
+    /// Size of one brick in a leaf node (dim^3)
+    pub(crate) brick_dim: u32,
 
     /// Extent of the contree
     pub(crate) contree_size: u32,

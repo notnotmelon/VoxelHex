@@ -1,11 +1,11 @@
 use crate::{
     contree::{
-        types::{ChunkData, VoxelContent},
+        types::{BrickData, VoxelContent},
         Contree, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
     raytracing::bevy::types::{
-        ContreeGPUDataHandler, ContreeRenderData, ChunkOwnedBy, ChunkUpdate, CacheUpdatePackage,
+        ContreeGPUDataHandler, ContreeRenderData, BrickOwnedBy, BrickUpdate, CacheUpdatePackage,
         VictimPointer,
     },
 };
@@ -158,17 +158,17 @@ impl ContreeGPUDataHandler {
     // ░░░░░░░░░░   ░░░░░░░░░░  ░░░░░░░░░  ░░░░░   ░░░░░░░░░  ░░░░░    ░░░░░
     //##############################################################################
 
-    /// Provides the mask inside a metadata element if the chunk under the given index is used.
-    fn get_chunk_used(used_bits: &[u32], chunk_index: usize) -> bool {
-        0 != (used_bits[chunk_index / 31] & (0x01 << (1 + (chunk_index % 31))))
+    /// Provides the mask inside a metadata element if the brick under the given index is used.
+    fn get_brick_used(used_bits: &[u32], brick_index: usize) -> bool {
+        0 != (used_bits[brick_index / 31] & (0x01 << (1 + (brick_index % 31))))
     }
 
-    /// Updates the given metadata array to set the given chunk as used
-    fn set_chunk_used(used_bits: &mut [u32], chunk_index: usize, used: bool) {
+    /// Updates the given metadata array to set the given brick as used
+    fn set_brick_used(used_bits: &mut [u32], brick_index: usize, used: bool) {
         if used {
-            used_bits[chunk_index / 31] |= 0x01 << (1 + (chunk_index % 31));
+            used_bits[brick_index / 31] |= 0x01 << (1 + (brick_index % 31));
         } else {
-            used_bits[chunk_index / 31] &= !(0x01 << (1 + (chunk_index % 31)));
+            used_bits[brick_index / 31] &= !(0x01 << (1 + (brick_index % 31)));
         }
     }
 
@@ -187,11 +187,11 @@ impl ContreeGPUDataHandler {
                 meta_array[node_index / 8] &= !(0x01 << (node_index % 8));
                 meta_array[node_index / 8] &= !(0x01 << (8 + (node_index % 8)));
             }
-            VoxelContent::Leaf(_chunks) => {
+            VoxelContent::Leaf(_bricks) => {
                 meta_array[node_index / 8] |= 0x01 << (node_index % 8);
                 meta_array[node_index / 8] &= !(0x01 << (8 + (node_index % 8)));
             }
-            VoxelContent::UniformLeaf(_chunk) => {
+            VoxelContent::UniformLeaf(_brick) => {
                 meta_array[node_index / 8] |= 0x01 << (node_index % 8);
                 meta_array[node_index / 8] |= 0x01 << (8 + (node_index % 8));
             }
@@ -225,17 +225,17 @@ impl ContreeGPUDataHandler {
     //   ░░░░░░░░░  ░░░░░   ░░░░░ ░░░░░ ░░░░░░░░░░░ ░░░░░░░░░░
     //##############################################################################
     /// Erases the child node pointed by the given victim pointer
-    /// returns with the vector of chunk updates and node index values modified
+    /// returns with the vector of brick updates and node index values modified
     fn erase_node_child<'a, T>(
         &mut self,
         meta_index: usize,
         child_sectant: usize,
         tree: &'a Contree<T>,
-    ) -> (Vec<ChunkUpdate<'a>>, Vec<usize>)
+    ) -> (Vec<BrickUpdate<'a>>, Vec<usize>)
     where
         T: Default + Clone + Eq + VoxelData + Hash,
     {
-        let mut modified_chunks = Vec::new();
+        let mut modified_bricks = Vec::new();
         let mut modified_nodes = vec![meta_index];
         debug_assert!(
             self.node_key_vs_meta_index.contains_right(&meta_index),
@@ -259,7 +259,7 @@ impl ContreeGPUDataHandler {
         debug_assert_ne!(
             child_descriptor,
             empty_marker::<u32>() as usize,
-            "Expected erased child[{}] of node[{}] meta[{}] to be an erasable node/chunk",
+            "Expected erased child[{}] of node[{}] meta[{}] to be an erasable node/brick",
             child_sectant,
             parent_key,
             meta_index
@@ -300,7 +300,7 @@ impl ContreeGPUDataHandler {
                 modified_nodes.push(child_descriptor);
             }
             VoxelContent::UniformLeaf(_) | VoxelContent::Leaf(_) => {
-                let chunk_index = child_descriptor & 0x7FFFFFFF;
+                let brick_index = child_descriptor & 0x7FFFFFFF;
                 debug_assert!(
                     (0 == child_sectant)
                         || matches!(tree.nodes.get(*parent_key), VoxelContent::Leaf(_)),
@@ -308,11 +308,11 @@ impl ContreeGPUDataHandler {
                     (meta_index, child_sectant)
                 );
                 if child_descriptor != empty_marker::<u32>() as usize {
-                    self.chunk_ownership
-                        .insert(chunk_index, ChunkOwnedBy::NotOwned);
-                    Self::set_chunk_used(&mut self.render_data.used_bits, chunk_index, false);
-                    modified_chunks.push(ChunkUpdate {
-                        chunk_index,
+                    self.brick_ownership
+                        .insert(brick_index, BrickOwnedBy::NotOwned);
+                    Self::set_brick_used(&mut self.render_data.used_bits, brick_index, false);
+                    modified_bricks.push(BrickUpdate {
+                        brick_index,
                         data: None,
                     });
                 }
@@ -320,7 +320,7 @@ impl ContreeGPUDataHandler {
         }
 
         //return with updated ranges in voxels and metadata
-        (modified_chunks, modified_nodes)
+        (modified_bricks, modified_nodes)
     }
 
     //##############################################################################
@@ -334,7 +334,7 @@ impl ContreeGPUDataHandler {
     // ░░░░░    ░░░░░    ░░░░░░░    ░░░░░░░░░░   ░░░░░░░░░░
     //##############################################################################
     /// Writes the data of the given node to the first available index
-    /// * `returns` - Upon success, returns (meta_index, chunk updates, modified_nodes)
+    /// * `returns` - Upon success, returns (meta_index, brick updates, modified_nodes)
     pub(crate) fn add_node<
         'a,
         #[cfg(all(feature = "bytecode", feature = "serialization"))] T: FromBencode
@@ -379,7 +379,7 @@ impl ContreeGPUDataHandler {
             } else {
                 self.victim_node.first_available_node(&mut self.render_data)
             };
-        let (modified_chunks, modified_nodes) = if let Some(robbed_parent) = robbed_parent {
+        let (modified_bricks, modified_nodes) = if let Some(robbed_parent) = robbed_parent {
             debug_assert_eq!(
                 (self.render_data.node_children
                     [robbed_parent.0 * BOX_NODE_CHILDREN_COUNT + robbed_parent.1 as usize])
@@ -440,30 +440,30 @@ impl ContreeGPUDataHandler {
                     }
                 }
             }
-            VoxelContent::UniformLeaf(chunk) => {
-                if let ChunkData::Solid(voxel) = chunk {
+            VoxelContent::UniformLeaf(brick) => {
+                if let BrickData::Solid(voxel) = brick {
                     self.render_data.node_children[parent_first_child_index] = 0x80000000 | *voxel;
                 } else {
                     self.render_data.node_children[parent_first_child_index] =
                         empty_marker::<u32>();
                 }
             }
-            VoxelContent::Leaf(chunks) => {
-                for (sectant, chunk) in chunks.iter().enumerate().take(BOX_NODE_CHILDREN_COUNT) {
-                    if let ChunkData::Solid(voxel) = chunk {
+            VoxelContent::Leaf(bricks) => {
+                for (sectant, brick) in bricks.iter().enumerate().take(BOX_NODE_CHILDREN_COUNT) {
+                    if let BrickData::Solid(voxel) = brick {
                         self.render_data.node_children[parent_first_child_index + sectant] =
                             0x80000000 | voxel;
                     } else {
-                        let node_entry = ChunkOwnedBy::NodeAsChild(node_key as u32, sectant as u8);
-                        let chunk_ownership =
-                            self.chunk_ownership.get_by_right(&node_entry).cloned();
-                        if let Some(chunk_index) = chunk_ownership {
+                        let node_entry = BrickOwnedBy::NodeAsChild(node_key as u32, sectant as u8);
+                        let brick_ownership =
+                            self.brick_ownership.get_by_right(&node_entry).cloned();
+                        if let Some(brick_index) = brick_ownership {
                             self.render_data.node_children[parent_first_child_index + sectant] =
-                                0x7FFFFFFF & chunk_index as u32;
-                            self.chunk_ownership.insert(chunk_index, node_entry);
-                            Self::set_chunk_used(
+                                0x7FFFFFFF & brick_index as u32;
+                            self.brick_ownership.insert(brick_index, node_entry);
+                            Self::set_brick_used(
                                 &mut self.render_data.used_bits,
-                                chunk_index,
+                                brick_index,
                                 true,
                             );
                         } else {
@@ -477,7 +477,7 @@ impl ContreeGPUDataHandler {
         (
             node_element_index,
             CacheUpdatePackage {
-                chunk_updates: modified_chunks,
+                brick_updates: modified_bricks,
                 modified_usage_range,
                 modified_nodes,
             },
@@ -494,39 +494,39 @@ impl ContreeGPUDataHandler {
     //  ███████████  █████   █████ █████ ░░█████████  █████ ░░████
     // ░░░░░░░░░░░  ░░░░░   ░░░░░ ░░░░░   ░░░░░░░░░  ░░░░░   ░░░░
     //##############################################################################
-    /// Provides the index of the first chunk available to be overwritten, through the second chance algorithm
-    /// * `returns` - The index of the first erasable chunk inside the cache and the range of chunks updated
-    fn first_available_chunk(&mut self) -> (usize, Range<usize>) {
-        let mut chunk_index;
-        let mut index_range = self.victim_chunk..(self.victim_chunk + 1);
+    /// Provides the index of the first brick available to be overwritten, through the second chance algorithm
+    /// * `returns` - The index of the first erasable brick inside the cache and the range of bricks updated
+    fn first_available_brick(&mut self) -> (usize, Range<usize>) {
+        let mut brick_index;
+        let mut index_range = self.victim_brick..(self.victim_brick + 1);
         loop {
-            chunk_index = self.victim_chunk;
-            index_range.start = index_range.start.min(chunk_index);
-            index_range.end = index_range.end.max(chunk_index + 1);
-            if ChunkOwnedBy::NotOwned
+            brick_index = self.victim_brick;
+            index_range.start = index_range.start.min(brick_index);
+            index_range.end = index_range.end.max(brick_index + 1);
+            if BrickOwnedBy::NotOwned
                 == *self
-                    .chunk_ownership
-                    .get_by_left(&chunk_index)
-                    .unwrap_or(&ChunkOwnedBy::NotOwned)
-                || !Self::get_chunk_used(&self.render_data.used_bits, chunk_index)
+                    .brick_ownership
+                    .get_by_left(&brick_index)
+                    .unwrap_or(&BrickOwnedBy::NotOwned)
+                || !Self::get_brick_used(&self.render_data.used_bits, brick_index)
             {
-                Self::set_chunk_used(&mut self.render_data.used_bits, chunk_index, true);
+                Self::set_brick_used(&mut self.render_data.used_bits, brick_index, true);
                 break;
             }
 
-            // mark current chunk to be deleted at next encounter and step the iterator forward
-            Self::set_chunk_used(&mut self.render_data.used_bits, chunk_index, false);
-            self.victim_chunk = (chunk_index + 1) % (self.render_data.used_bits.len() * 31);
+            // mark current brick to be deleted at next encounter and step the iterator forward
+            Self::set_brick_used(&mut self.render_data.used_bits, brick_index, false);
+            self.victim_brick = (brick_index + 1) % (self.render_data.used_bits.len() * 31);
         }
-        (chunk_index, index_range)
+        (brick_index, index_range)
     }
 
-    /// Makes space for the requested chunk and updates chunk ownership if needed
-    /// * `tree` - The contree where the chunk is found
+    /// Makes space for the requested brick and updates brick ownership if needed
+    /// * `tree` - The contree where the brick is found
     /// * `node_key` - The key for the requested leaf node, whoose child needs to be uploaded
-    /// * `target_sectant` - The sectant where the target chunk lies
-    /// * `returns` - child descriptor, chunk updates applied, nodes updated during insertion
-    pub(crate) fn add_chunk<'a, T>(
+    /// * `target_sectant` - The sectant where the target brick lies
+    /// * `returns` - child descriptor, brick updates applied, nodes updated during insertion
+    pub(crate) fn add_brick<'a, T>(
         &mut self,
         tree: &'a Contree<T>,
         node_key: usize,
@@ -535,32 +535,32 @@ impl ContreeGPUDataHandler {
     where
         T: Default + Clone + Eq + Send + Sync + Hash + VoxelData + 'static,
     {
-        let (chunk, node_entry) = 
+        let (brick, node_entry) = 
             (
                 match tree.nodes.get(node_key) {
-                    VoxelContent::UniformLeaf(chunk) => chunk,
-                    VoxelContent::Leaf(chunks) => &chunks[target_sectant as usize],
+                    VoxelContent::UniformLeaf(brick) => brick,
+                    VoxelContent::Leaf(bricks) => &bricks[target_sectant as usize],
                     VoxelContent::Nothing | VoxelContent::Internal(_) => {
-                        panic!("Trying to add chunk from Internal or empty node!")
+                        panic!("Trying to add brick from Internal or empty node!")
                     }
                 },
-                ChunkOwnedBy::NodeAsChild(node_key as u32, target_sectant),
+                BrickOwnedBy::NodeAsChild(node_key as u32, target_sectant),
             );
 
-        match chunk {
-            ChunkData::Empty => (
+        match brick {
+            BrickData::Empty => (
                 empty_marker::<u32>() as usize,
                 CacheUpdatePackage::default(),
             ),
-            ChunkData::Solid(_voxel) => unreachable!("Shouldn't try to upload solid MIP chunks"),
-            ChunkData::Parted(chunk) => {
-                let (chunk_index, modified_chunk_range) = self.first_available_chunk();
-                let (mut modified_chunks, modified_nodes) = match *self
-                    .chunk_ownership
-                    .get_by_left(&chunk_index)
-                    .unwrap_or(&ChunkOwnedBy::NotOwned)
+            BrickData::Solid(_voxel) => unreachable!("Shouldn't try to upload solid MIP bricks"),
+            BrickData::Parted(brick) => {
+                let (brick_index, modified_brick_range) = self.first_available_brick();
+                let (mut modified_bricks, modified_nodes) = match *self
+                    .brick_ownership
+                    .get_by_left(&brick_index)
+                    .unwrap_or(&BrickOwnedBy::NotOwned)
                 {
-                    ChunkOwnedBy::NodeAsChild(key, sectant) => {
+                    BrickOwnedBy::NodeAsChild(key, sectant) => {
                         if self
                             .node_key_vs_meta_index
                             .get_by_left(&(key as usize))
@@ -578,28 +578,28 @@ impl ContreeGPUDataHandler {
                             (Vec::new(), Vec::new())
                         }
                     }
-                    ChunkOwnedBy::NotOwned => (Vec::new(), Vec::new()),
+                    BrickOwnedBy::NotOwned => (Vec::new(), Vec::new()),
                 };
 
-                self.chunk_ownership.insert(chunk_index, node_entry);
+                self.brick_ownership.insert(brick_index, node_entry);
 
                 debug_assert_eq!(
-                    tree.chunk_dim.pow(3) as usize,
-                    chunk.len(),
-                    "Expected Chunk slice to align to tree chunk dimension"
+                    tree.brick_dim.pow(3) as usize,
+                    brick.len(),
+                    "Expected Brick slice to align to tree brick dimension"
                 );
-                modified_chunks.push(ChunkUpdate {
-                    chunk_index,
-                    data: Some(&chunk[..]),
+                modified_bricks.push(BrickUpdate {
+                    brick_index,
+                    data: Some(&brick[..]),
                 });
 
                 (
-                    0x7FFFFFFF & chunk_index, // Child descriptor for parted chunk as described in @node_children
+                    0x7FFFFFFF & brick_index, // Child descriptor for parted brick as described in @node_children
                     CacheUpdatePackage {
-                        chunk_updates: modified_chunks,
+                        brick_updates: modified_bricks,
                         modified_usage_range: Range {
-                            start: modified_chunk_range.start / 31,
-                            end: (modified_chunk_range.end / 31 + 1)
+                            start: modified_brick_range.start / 31,
+                            end: (modified_brick_range.end / 31 + 1)
                                 .min(self.render_data.used_bits.len()),
                         },
                         modified_nodes,

@@ -471,7 +471,7 @@ fn test_uniform_solid_leaf_separated_by_clear_where_dim_is_4() {
     const MATRIX_DIMENSION: u32 = 4;
     let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
-    // Fill each sectant with the same data, they should become a solid chunks
+    // Fill each sectant with the same data, they should become a solid bricks
     let color_base = 0xFFFF00AA;
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
         let start_pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * tree_size as f32);
@@ -518,7 +518,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
     const MATRIX_DIMENSION: u32 = 4;
     let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
-    // Fill each sectant with the same data, they should become a solid chunks
+    // Fill each sectant with the same data, they should become a solid bricks
     let color_base = 0xFFFF00AA;
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
         let start_pos = V3c::<u32>::from(SECTANT_OFFSET_LUT[sectant] * tree_size as f32);
@@ -564,7 +564,7 @@ fn test_uniform_solid_leaf_separated_by_insert_where_dim_is_4() {
 }
 
 #[test]
-fn test_uniform_parted_chunk_leaf_separated_by_clear_where_dim_is_4() {
+fn test_uniform_parted_brick_leaf_separated_by_clear_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
     let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
@@ -633,12 +633,12 @@ fn test_uniform_parted_chunk_leaf_separated_by_clear_where_dim_is_4() {
 }
 
 #[test]
-fn test_simple_uniform_parted_chunk_leaf_overwrites_separated_by_insert_where_dim_is_2() {
+fn test_simple_uniform_parted_brick_leaf_overwrites_separated_by_insert_where_dim_is_2() {
     let tree_size = 8;
     const MATRIX_DIMENSION: u32 = 2;
     let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
 
-    // Fill each sectant inside the chunk with the same data
+    // Fill each sectant inside the brick with the same data
     let color_base_original = 0xF00000FF;
     let mut color_base = color_base_original;
     for sectant in 0..BOX_NODE_CHILDREN_COUNT {
@@ -661,7 +661,7 @@ fn test_simple_uniform_parted_chunk_leaf_overwrites_separated_by_insert_where_di
 }
 
 #[test]
-fn test_simple_uniform_parted_chunk_leaf_separated_by_insert_where_dim_is_2() {
+fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_2() {
     let tree_size = 8;
     const MATRIX_DIMENSION: u32 = 2;
     let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
@@ -712,7 +712,7 @@ fn test_simple_uniform_parted_chunk_leaf_separated_by_insert_where_dim_is_2() {
 }
 
 #[test]
-fn test_simple_uniform_parted_chunk_leaf_separated_by_insert_where_dim_is_4() {
+fn test_simple_uniform_parted_brick_leaf_separated_by_insert_where_dim_is_4() {
     let tree_size = 16;
     const MATRIX_DIMENSION: u32 = 4;
     let mut tree: Contree = Contree::new(tree_size, MATRIX_DIMENSION).ok().unwrap();
@@ -823,7 +823,7 @@ fn test_insert_at_lod_with_unaligned_position_where_dim_is_4() {
         }
     }
 
-    // At most one chunk can be updated; Starting from 1,1,1 the updated area spans 3x3x3,
+    // At most one brick can be updated; Starting from 1,1,1 the updated area spans 3x3x3,
     // thus the number of voxels updated are 27
     assert!(hits == 27, "Expected 27 hits instead of {hits}");
 }
@@ -889,7 +889,7 @@ fn test_insert_at_lod_with_unaligned_size_and_position_where_dim_is_1() {
         }
     }
 
-    // Since the position points to a corner of a chunk, only one voxel is inserted
+    // Since the position points to a corner of a brick, only one voxel is inserted
     assert_eq!(hits, 1);
 }
 
@@ -1093,9 +1093,9 @@ fn test_simple_clear_where_dim_is_2() {
 #[test]
 fn test_clear_small_part_of_large_node_ocbits_resolution_test() {
     const TREE_SIZE: u32 = 128;
-    const CHUNK_DIMENSION: u32 = 8;
+    const BRICK_DIMENSION: u32 = 8;
     let red: Albedo = 0xFF0000FF.into();
-    let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert(&V3c::new(0, 1, 1), &red).ok().unwrap();
     tree.insert(&V3c::new(1, 0, 0), &red).ok().unwrap();
@@ -1110,9 +1110,9 @@ fn test_clear_small_part_of_large_node_ocbits_resolution_test() {
 #[test]
 fn test_set_small_part_of_large_node_ocbits_resolution_test_underflow() {
     const TREE_SIZE: u32 = 128;
-    const CHUNK_DIMENSION: u32 = 8;
+    const BRICK_DIMENSION: u32 = 8;
     let red: Albedo = 0xFF0000FF.into();
-    let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert_at_lod(&V3c::new(33, 33, 33), 2, &red)
         .ok()
@@ -1127,9 +1127,9 @@ fn test_set_small_part_of_large_node_ocbits_resolution_test_underflow() {
 #[test]
 fn test_set_small_part_of_large_node_ocbits_resolution_test_overflow() {
     const TREE_SIZE: u32 = 128;
-    const CHUNK_DIMENSION: u32 = 8;
+    const BRICK_DIMENSION: u32 = 8;
     let red: Albedo = 0xFF0000FF.into();
-    let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.insert(&V3c::new(31, 31, 31), &red).ok().unwrap();
 
@@ -1251,9 +1251,9 @@ fn test_clear_to_nothing() {
 fn test_clear_edge_case() {
     std::env::set_var("RUST_BACKTRACE", "1");
     const TREE_SIZE: u32 = 64;
-    const CHUNK_DIMENSION: u32 = 16;
+    const BRICK_DIMENSION: u32 = 16;
     let red: Albedo = 0xFF0000FF.into();
-    let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     tree.update(&V3c::new(1, 0, 0), voxel_data!(&0xFACEFEED))
         .ok()
@@ -1498,8 +1498,8 @@ fn test_clear_at_lod_with_unaligned_position_where_dim_is_4() {
     }
 
     // number of hits should be the number of nodes set minus the number of nodes cleared
-    // Note: Only at most one chunk is updated with each update call
-    // --> In this case the relevant chunk is updated from 1,1,1 ---> 3,3,3 ( inclusive )
+    // Note: Only at most one brick is updated with each update call
+    // --> In this case the relevant brick is updated from 1,1,1 ---> 3,3,3 ( inclusive )
     // So 3^3 voxels are cleared == 27
     assert_eq!(hits, (512 - 27));
 }

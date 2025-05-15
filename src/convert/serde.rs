@@ -57,7 +57,7 @@ where
             {
                 match __value {
                     "auto_simplify" => serde::__private::Ok(__Field::__field0),
-                    "chunk_dim" => serde::__private::Ok(__Field::__field1),
+                    "brick_dim" => serde::__private::Ok(__Field::__field1),
                     "contree_size" => serde::__private::Ok(__Field::__field2),
                     "nodes" => serde::__private::Ok(__Field::__field3),
                     "node_children" => serde::__private::Ok(__Field::__field4),
@@ -72,7 +72,7 @@ where
             {
                 match __value {
                     b"auto_simplify" => serde::__private::Ok(__Field::__field0),
-                    b"chunk_dim" => serde::__private::Ok(__Field::__field1),
+                    b"brick_dim" => serde::__private::Ok(__Field::__field1),
                     b"contree_size" => serde::__private::Ok(__Field::__field2),
                     b"nodes" => serde::__private::Ok(__Field::__field3),
                     b"node_children" => serde::__private::Ok(__Field::__field4),
@@ -194,7 +194,7 @@ where
                 let __field8 = serde::__private::Default::default();
                 serde::__private::Ok(Octree {
                     auto_simplify: __field0,
-                    chunk_dim: __field1,
+                    brick_dim: __field1,
                     contree_size: __field2,
                     nodes: __field3,
                     node_children: __field4,
@@ -241,7 +241,7 @@ where
                         __Field::__field1 => {
                             if serde::__private::Option::is_some(&__field1) {
                                 return serde::__private::Err(
-                                    <__A::Error as serde::de::Error>::duplicate_field("chunk_dim"),
+                                    <__A::Error as serde::de::Error>::duplicate_field("brick_dim"),
                                 );
                             }
                             __field1 =
@@ -328,7 +328,7 @@ where
                 };
                 let __field1 = match __field1 {
                     serde::__private::Some(__field1) => __field1,
-                    serde::__private::None => serde::__private::de::missing_field("chunk_dim")?,
+                    serde::__private::None => serde::__private::de::missing_field("brick_dim")?,
                 };
                 let __field2 = match __field2 {
                     serde::__private::Some(__field2) => __field2,
@@ -374,7 +374,7 @@ where
 
                 serde::__private::Ok(Octree {
                     auto_simplify: __field0,
-                    chunk_dim: __field1,
+                    brick_dim: __field1,
                     contree_size: __field2,
                     nodes: __field3,
                     node_children: __field4,
@@ -388,7 +388,7 @@ where
         #[doc(hidden)]
         const FIELDS: &'static [&'static str] = &[
             "auto_simplify",
-            "chunk_dim",
+            "brick_dim",
             "contree_size",
             "nodes",
             "node_children",

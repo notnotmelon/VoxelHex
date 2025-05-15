@@ -21,7 +21,7 @@ use voxelhex::{
 const DISPLAY_RESOLUTION: [u32; 2] = [1024, 768];
 
 #[cfg(feature = "bevy_wgpu")]
-const CHUNK_DIMENSION: u32 = 32;
+const BRICK_DIMENSION: u32 = 32;
 
 #[cfg(feature = "bevy_wgpu")]
 const TREE_SIZE: u32 = 128;
@@ -54,7 +54,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
     );
 
     // fill contree with data
-    let mut tree: Contree = voxelhex::contree::Contree::new(TREE_SIZE, CHUNK_DIMENSION)
+    let mut tree: Contree = voxelhex::contree::Contree::new(TREE_SIZE, BRICK_DIMENSION)
         .ok()
         .unwrap();
 

@@ -524,7 +524,7 @@ mod contree_raytracing_tests {
     }
 
     #[test]
-    fn test_edge_case_chunk_undetected() {
+    fn test_edge_case_brick_undetected() {
         let mut tree: Contree = Contree::new(16, 4).ok().unwrap();
 
         for x in 0..4 {
@@ -559,10 +559,10 @@ mod contree_raytracing_tests {
     }
 
     #[test]
-    fn test_edge_case_detailed_chunk_undetected() {
+    fn test_edge_case_detailed_brick_undetected() {
         let tree_size = 8;
-        const CHUNK_DIMENSION: u32 = 2;
-        let mut tree: Contree = Contree::new(tree_size, CHUNK_DIMENSION).ok().unwrap();
+        const BRICK_DIMENSION: u32 = 2;
+        let mut tree: Contree = Contree::new(tree_size, BRICK_DIMENSION).ok().unwrap();
 
         for x in 0..tree_size {
             for y in 0..tree_size {
@@ -591,10 +591,10 @@ mod contree_raytracing_tests {
     }
 
     #[test]
-    fn test_edge_case_detailed_chunk_z_edge_error() {
+    fn test_edge_case_detailed_brick_z_edge_error() {
         let tree_size = 8;
-        const CHUNK_DIMENSION: u32 = 2;
-        let mut tree: Contree = Contree::new(tree_size, CHUNK_DIMENSION).ok().unwrap();
+        const BRICK_DIMENSION: u32 = 2;
+        let mut tree: Contree = Contree::new(tree_size, BRICK_DIMENSION).ok().unwrap();
 
         for x in 1..tree_size {
             for y in 1..tree_size {
@@ -626,8 +626,8 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_deep_stack() {
         let tree_size = 1024;
-        const CHUNK_DIMENSION: u32 = 1;
-        let mut tree: Contree = Contree::new(tree_size, CHUNK_DIMENSION).ok().unwrap();
+        const BRICK_DIMENSION: u32 = 1;
+        let mut tree: Contree = Contree::new(tree_size, BRICK_DIMENSION).ok().unwrap();
 
         let target = V3c::new(tree_size - 1, tree_size - 1, tree_size - 1);
 
@@ -651,10 +651,10 @@ mod contree_raytracing_tests {
     }
 
     #[test]
-    fn test_edge_case_chunk_traversal_error() {
+    fn test_edge_case_brick_traversal_error() {
         let tree_size = 8;
-        const CHUNK_DIMENSION: u32 = 2;
-        let mut tree: Contree = Contree::new(tree_size, CHUNK_DIMENSION).ok().unwrap();
+        const BRICK_DIMENSION: u32 = 2;
+        let mut tree: Contree = Contree::new(tree_size, BRICK_DIMENSION).ok().unwrap();
 
         tree.insert(&V3c::new(0, 0, 0), &Albedo::from(0x000000FF))
             .ok()
@@ -681,10 +681,10 @@ mod contree_raytracing_tests {
     }
 
     #[test]
-    fn test_edge_case_chunk_boundary_error() {
-        const CHUNK_DIMENSION: u32 = 8;
+    fn test_edge_case_brick_boundary_error() {
+        const BRICK_DIMENSION: u32 = 8;
         const TREE_SIZE: u32 = 128;
-        let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+        let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
         for x in 0..TREE_SIZE {
             for y in 0..TREE_SIZE {
@@ -727,8 +727,8 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_cube_flaps() {
         const TREE_SIZE: u32 = 64;
-        const CHUNK_DIMENSION: u32 = 1;
-        let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+        const BRICK_DIMENSION: u32 = 1;
+        let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
         for x in 0..TREE_SIZE {
             for y in 0..TREE_SIZE {
@@ -768,8 +768,8 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_context_bleed() {
         const TREE_SIZE: u32 = 64;
-        const CHUNK_DIMENSION: u32 = 1;
-        let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
+        const BRICK_DIMENSION: u32 = 1;
+        let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
         for x in 0..TREE_SIZE {
             for y in 0..TREE_SIZE {
