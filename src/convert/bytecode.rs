@@ -1,6 +1,6 @@
-use crate::boxtree::types::PaletteIndexValues;
-use crate::boxtree::BOX_NODE_CHILDREN_COUNT;
-use crate::boxtree::{
+use crate::contree::types::PaletteIndexValues;
+use crate::contree::BOX_NODE_CHILDREN_COUNT;
+use crate::contree::{
     types::{BrickData, VoxelChildren, VoxelContent},
     Color, Contree,
 };
@@ -443,10 +443,10 @@ where
                     )),
                 }?;
 
-                let boxtree_size = match list.next_object()?.unwrap() {
+                let contree_size = match list.next_object()?.unwrap() {
                     Object::Integer(i) => Ok(i.parse()?),
                     _ => Err(bendy::decoding::Error::unexpected_token(
-                        "int field boxtree_size",
+                        "int field contree_size",
                         "Something else",
                     )),
                 }?;
@@ -454,7 +454,7 @@ where
                 let brick_dim = match list.next_object()?.unwrap() {
                     Object::Integer(i) => Ok(i.parse()?),
                     _ => Err(bendy::decoding::Error::unexpected_token(
-                        "int field boxtree_size",
+                        "int field contree_size",
                         "Something else",
                     )),
                 }?;
@@ -478,7 +478,7 @@ where
 
                 Ok(Self {
                     auto_simplify,
-                    contree_size: boxtree_size,
+                    contree_size: contree_size,
                     brick_dim,
                     nodes,
                     node_children,

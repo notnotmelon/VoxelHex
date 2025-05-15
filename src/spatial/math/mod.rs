@@ -2,7 +2,7 @@ mod tests;
 pub mod vector;
 
 use crate::{
-    boxtree::BOX_NODE_DIMENSION,
+    contree::BOX_NODE_DIMENSION,
     spatial::{lut::SECTANT_OFFSET_LUT, math::vector::V3c, Cube},
 };
 use std::ops::Neg;

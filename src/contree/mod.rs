@@ -6,11 +6,11 @@ mod node;
 
 pub use crate::spatial::math::vector::{V3c, V3cf32};
 pub use types::{
-    Color, Contree, BoxTreeEntry, VoxelData,
+    Color, Contree, ContreeEntry, VoxelData,
 };
 
 use crate::{
-    boxtree::{
+    contree::{
         detail::child_sectant_for,
         types::{BrickData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
     },
@@ -46,53 +46,53 @@ use bendy::{decoding::FromBencode, encoding::ToBencode};
 //  ██████████ █████  ░░█████    █████    █████   █████    █████
 // ░░░░░░░░░░ ░░░░░    ░░░░░    ░░░░░    ░░░░░   ░░░░░    ░░░░░
 //####################################################################################
-impl<'a, T: VoxelData> From<(&'a Color, &'a T)> for BoxTreeEntry<'a, T> {
+impl<'a, T: VoxelData> From<(&'a Color, &'a T)> for ContreeEntry<'a, T> {
     fn from((albedo, data): (&'a Color, &'a T)) -> Self {
-        BoxTreeEntry::Complex(albedo, data)
+        ContreeEntry::Complex(albedo, data)
     }
 }
 
 #[macro_export]
 macro_rules! voxel_data {
     ($data:expr) => {
-        BoxTreeEntry::Informative($data)
+        ContreeEntry::Informative($data)
     };
     () => {
-        BoxTreeEntry::Empty
+        ContreeEntry::Empty
     };
 }
 
-impl<'a, T: VoxelData> From<&'a Color> for BoxTreeEntry<'a, T> {
+impl<'a, T: VoxelData> From<&'a Color> for ContreeEntry<'a, T> {
     fn from(albedo: &'a Color) -> Self {
-        BoxTreeEntry::Visual(albedo)
+        ContreeEntry::Visual(albedo)
     }
 }
 
-impl<'a, T: VoxelData> BoxTreeEntry<'a, T> {
+impl<'a, T: VoxelData> ContreeEntry<'a, T> {
     pub fn albedo(&self) -> Option<&'a Color> {
         match self {
-            BoxTreeEntry::Empty => None,
-            BoxTreeEntry::Visual(albedo) => Some(albedo),
-            BoxTreeEntry::Informative(_) => None,
-            BoxTreeEntry::Complex(albedo, _) => Some(albedo),
+            ContreeEntry::Empty => None,
+            ContreeEntry::Visual(albedo) => Some(albedo),
+            ContreeEntry::Informative(_) => None,
+            ContreeEntry::Complex(albedo, _) => Some(albedo),
         }
     }
 
     pub fn data(&self) -> Option<&'a T> {
         match self {
-            BoxTreeEntry::Empty => None,
-            BoxTreeEntry::Visual(_) => None,
-            BoxTreeEntry::Informative(data) => Some(data),
-            BoxTreeEntry::Complex(_, data) => Some(data),
+            ContreeEntry::Empty => None,
+            ContreeEntry::Visual(_) => None,
+            ContreeEntry::Informative(data) => Some(data),
+            ContreeEntry::Complex(_, data) => Some(data),
         }
     }
 
     pub fn is_none(&self) -> bool {
         match self {
-            BoxTreeEntry::Empty => true,
-            BoxTreeEntry::Visual(albedo) => albedo.is_transparent(),
-            BoxTreeEntry::Informative(data) => data.is_empty(),
-            BoxTreeEntry::Complex(albedo, data) => albedo.is_transparent() && data.is_empty(),
+            ContreeEntry::Empty => true,
+            ContreeEntry::Visual(albedo) => albedo.is_transparent(),
+            ContreeEntry::Informative(data) => data.is_empty(),
+            ContreeEntry::Complex(albedo, data) => albedo.is_transparent() && data.is_empty(),
         }
     }
 
@@ -164,8 +164,8 @@ impl<
         Ok(Self::from_bytes(bytes))
     }
 
-    /// creates an boxtree with the given size
-    /// * `brick_dimension` - must be one of `(2^x)` and smaller than the size of the boxtree
+    /// creates an contree with the given size
+    /// * `brick_dimension` - must be one of `(2^x)` and smaller than the size of the contree
     /// * `size` - must be `brick_dimension * (4^x)`, e.g: brick_dimension == 2 --> size can be 8,32,128...
     pub fn new(size: u32, brick_dimension: u32) -> Result<Self, ContreeError> {
         if 0 == size || (brick_dimension as f32).log(2.0).fract() != 0.0 {
@@ -199,9 +199,9 @@ impl<
         })
     }
 
-    /// Getter function for the boxtree
+    /// Getter function for the contree
     /// * Returns immutable reference to the data at the given position, if there is any
-    pub fn get(&self, position: &V3c<u32>) -> BoxTreeEntry<T> {
+    pub fn get(&self, position: &V3c<u32>) -> ContreeEntry<T> {
         VoxelContent::pix_get_ref(
             &self.get_internal(
                 Self::ROOT_NODE_KEY as usize,
@@ -213,7 +213,7 @@ impl<
         )
     }
 
-    /// Internal Getter function for the boxtree, to be able to call get from within the tree itself
+    /// Internal Getter function for the contree, to be able to call get from within the tree itself
     /// * Returns immutable reference to the data of the given node at the given position, if there is any
     fn get_internal(
         &self,
@@ -230,7 +230,7 @@ impl<
             match self.nodes.get(current_node_key) {
                 VoxelContent::Nothing => return empty_marker(),
                 VoxelContent::Leaf(bricks) => {
-                    // In case brick_dimension == boxtree size, the root node can not be a leaf...
+                    // In case brick_dimension == contree size, the root node can not be a leaf...
                     debug_assert!(self.brick_dim < self.contree_size);
 
                     // Hash the position to the target child
@@ -319,7 +319,7 @@ impl<
         }
     }
 
-    /// Tells the radius of the area covered by the boxtree
+    /// Tells the radius of the area covered by the contree
     pub fn get_size(&self) -> u32 {
         self.contree_size
     }

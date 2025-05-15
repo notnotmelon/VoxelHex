@@ -1,21 +1,21 @@
 use voxelhex::{
-    boxtree::{Color, Contree, BoxTreeEntry, V3c, VoxelData},
+    contree::{Color, Contree, ContreeEntry, V3c, VoxelData},
     voxel_data,
 };
 
 fn main() {
-    // To create an empty boxtree the size and brick dimension needs to be set
+    // To create an empty contree the size and brick dimension needs to be set
     const TREE_SIZE: u32 = 128; // The length of the edges of the cube the BoxTree covers ( number of voxels )
     const BRICK_DIMENSION: u32 = 8; // How big should one "group of voxels" should be refer to docs @Octree::new
                                     // If you have no idea what it should be, 32 is a good reference
     let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
-    // The visual data the boxtree contains are provided through the ALbedo type
+    // The visual data the contree contains are provided through the ALbedo type
     let voxel_color_red: Color = 0xFF0000FF.into(); // RGBA hex codes can be used like this
     let voxel_color_green: Color = 0x00FF00FF.into();
     let voxel_color_blue: Color = 0x0000FFFF.into();
 
-    // Data can be inserted through a reference to a position inside bounds of the boxtree
+    // Data can be inserted through a reference to a position inside bounds of the contree
     tree.insert(&V3c::new(0, 0, 0), &voxel_color_red)
         .ok()
         .unwrap();
@@ -36,7 +36,7 @@ fn main() {
     )
     .ok()
     .unwrap();
-    assert_eq!(tree.get(&V3c::new(0, 1, 0)), BoxTreeEntry::Empty);
+    assert_eq!(tree.get(&V3c::new(0, 1, 0)), ContreeEntry::Empty);
 
     // To overwrite data, just insert it to the same position
     tree.insert(&V3c::new(0, 0, 0), &voxel_color_green)
@@ -45,7 +45,7 @@ fn main() {
     assert_eq!(tree.get(&V3c::new(0, 0, 0)), (&voxel_color_green).into());
     assert_eq!(tree.get(&V3c::new(0, 0, 1)), (&voxel_color_green).into());
 
-    // custom data can also be stored inside the boxtree, e.g. u32 ( most number types by default )
+    // custom data can also be stored inside the contree, e.g. u32 ( most number types by default )
     tree.insert(&V3c::new(0, 1, 1), voxel_data!(&0xBEEF))
         .ok()
         .unwrap();
@@ -140,9 +140,9 @@ fn main() {
         }
     }
 
-    // You can also use your own data types to be stored in an boxtree
+    // You can also use your own data types to be stored in an contree
     // You have to implement some traits(e.g. VoxelData) for it though. See below!
-    let _custom_boxtree: Contree<MyAwesomeData> = Contree::new(8, 2).ok().unwrap();
+    let _custom_contree: Contree<MyAwesomeData> = Contree::new(8, 2).ok().unwrap();
 }
 
 // The trait VoxelData is required in order to differentiate between empty and non-empty contents of a voxel
@@ -156,7 +156,7 @@ impl VoxelData for MyAwesomeData {
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
-// ..And to be able to save and load the data in the boxtree, the bendy crate is used.
+// ..And to be able to save and load the data in the contree, the bendy crate is used.
 // The traits below need to be implemented for bytecode serialization
 // This is used instead of serde, as the contents are much more thightly packed,
 // and there a significant difference in performance

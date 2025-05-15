@@ -1,5 +1,5 @@
 use crate::{
-    boxtree::{
+    contree::{
         types::{BrickData, VoxelContent, PaletteIndexValues},
         Contree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
@@ -7,8 +7,8 @@ use crate::{
     raytracing::bevy::{
         create_depth_texture, create_output_texture,
         types::{
-            BoxTreeGPUDataHandler, BoxTreeGPUHost, BoxTreeGPUView, BoxTreeMetaData,
-            BoxTreeRenderData, BoxTreeSpyGlass, BrickUpdate, VhxRenderPipeline, VhxViewSet,
+            ContreeGPUDataHandler, ContreeGPUHost, BoxTreeGPUView, ContreeMetaData,
+            ContreeRenderData, BoxTreeSpyGlass, BrickUpdate, VhxRenderPipeline, VhxViewSet,
             VictimPointer, Viewport,
         },
     },
@@ -34,7 +34,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-fn boxtree_properties<
+fn contree_properties<
     #[cfg(all(feature = "bytecode", feature = "serialization"))] T: FromBencode
         + ToBencode
         + Serialize
@@ -78,7 +78,7 @@ impl<
             + Sync
             + 'static,
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData + Send + Sync + 'static,
-    > BoxTreeGPUHost<T>
+    > ContreeGPUHost<T>
 {
     //##############################################################################
     //     ███████      █████████  ███████████ ███████████   ██████████ ██████████
@@ -115,11 +115,11 @@ impl<
         resolution: [u32; 2],
         mut images: ResMut<Assets<Image>>,
     ) -> usize {
-        let gpu_data_handler = BoxTreeGPUDataHandler {
-            render_data: BoxTreeRenderData {
-                boxtree_meta: BoxTreeMetaData {
-                    boxtree_size: self.tree.contree_size,
-                    tree_properties: boxtree_properties(&self.tree),
+        let gpu_data_handler = ContreeGPUDataHandler {
+            render_data: ContreeRenderData {
+                contree_meta: ContreeMetaData {
+                    contree_size: self.tree.contree_size,
+                    tree_properties: contree_properties(&self.tree),
                     ambient_light_color: V3c::new(1., 1., 1.),
                     ambient_light_position: V3c::new(
                         self.tree.contree_size as f32,
@@ -377,7 +377,7 @@ pub(crate) fn write_to_gpu<
     #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize + DeserializeOwned + Default + Eq + Clone + Hash + VoxelData + Send + Sync + 'static,
     #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData + Send + Sync + 'static,
 >(
-    tree_gpu_host: Option<ResMut<BoxTreeGPUHost<T>>>,
+    tree_gpu_host: Option<ResMut<ContreeGPUHost<T>>>,
     vhx_pipeline: Option<ResMut<VhxRenderPipeline>>,
     vhx_view_set: ResMut<VhxViewSet>,
 ) {
@@ -442,12 +442,12 @@ pub(crate) fn write_to_gpu<
         // Data updates for BoxTree MIP map feature
         let tree = &tree_host.tree;
         // Regenerate feature bits
-        view.data_handler.render_data.boxtree_meta.tree_properties = boxtree_properties(tree);
+        view.data_handler.render_data.contree_meta.tree_properties = contree_properties(tree);
 
         /*        // Write to GPU
         let mut buffer = UniformBuffer::new(Vec::<u8>::new());
         buffer
-            .write(&view.data_handler.render_data.boxtree_meta)
+            .write(&view.data_handler.render_data.contree_meta)
             .unwrap();
         render_queue.write_buffer(
             &resources.node_metadata_buffer,

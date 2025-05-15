@@ -1,4 +1,4 @@
-use crate::boxtree::{types::PaletteIndexValues, Contree, V3cf32, VoxelData};
+use crate::contree::{types::PaletteIndexValues, Contree, V3cf32, VoxelData};
 use bevy::{
     asset::Handle,
     ecs::system::Resource,
@@ -22,15 +22,15 @@ use std::{
 };
 
 #[derive(Clone, ShaderType)]
-pub struct BoxTreeMetaData {
+pub struct ContreeMetaData {
     /// Color of the ambient light in the render
     pub ambient_light_color: V3cf32,
 
     /// Position of the ambient light in the render
     pub ambient_light_position: V3cf32,
 
-    /// Size of the boxtree to display
-    pub(crate) boxtree_size: u32,
+    /// Size of the contree to display
+    pub(crate) contree_size: u32,
 
     /// Contains the properties of the Octree
     ///  _===================================================================_
@@ -79,7 +79,7 @@ where
 
 #[derive(Resource, Clone, TypePath, ExtractResource)]
 #[type_path = "shocovox::gpu::OctreeGPUHost"]
-pub struct BoxTreeGPUHost<T = u32>
+pub struct ContreeGPUHost<T = u32>
 where
     T: Default + Clone + Eq + VoxelData + Send + Sync + Hash + 'static,
 {
@@ -90,7 +90,7 @@ where
 #[type_path = "shocovox::gpu::VhxViewSet"]
 pub struct VhxViewSet {
     pub views: Vec<Arc<Mutex<BoxTreeGPUView>>>,
-    pub(crate) resources: Vec<Option<BoxTreeRenderDataResources>>,
+    pub(crate) resources: Vec<Option<ContreeRenderDataResources>>,
 }
 
 /// The Camera responsible for storing frustum and view related data
@@ -131,7 +131,7 @@ pub struct BoxTreeGPUView {
     pub data_ready: bool,
 
     /// The data handler responsible for uploading data to the GPU
-    pub(crate) data_handler: BoxTreeGPUDataHandler,
+    pub(crate) data_handler: ContreeGPUDataHandler,
 
     /// The currently used resolution the raycasting dimensions are based for the base ray
     pub(crate) resolution: [u32; 2],
@@ -162,8 +162,8 @@ pub(crate) enum BrickOwnedBy {
 }
 
 #[derive(Resource, Clone)]
-pub struct BoxTreeGPUDataHandler {
-    pub(crate) render_data: BoxTreeRenderData,
+pub struct ContreeGPUDataHandler {
+    pub(crate) render_data: ContreeRenderData,
     pub(crate) victim_node: VictimPointer,
     pub(crate) victim_brick: usize,
     pub(crate) node_key_vs_meta_index: BiHashMap<usize, usize>,
@@ -172,7 +172,7 @@ pub struct BoxTreeGPUDataHandler {
 }
 
 #[derive(Clone)]
-pub(crate) struct BoxTreeRenderDataResources {
+pub(crate) struct ContreeRenderDataResources {
     pub(crate) render_stage_prepass_bind_group: BindGroup,
     pub(crate) render_stage_main_bind_group: BindGroup,
 
@@ -186,7 +186,7 @@ pub(crate) struct BoxTreeRenderDataResources {
     // Octree render data group
     // --{
     pub(crate) tree_bind_group: BindGroup,
-    pub(crate) boxtree_meta_buffer: Buffer,
+    pub(crate) contree_meta_buffer: Buffer,
     pub(crate) used_bits_buffer: Buffer,
     pub(crate) node_metadata_buffer: Buffer,
     pub(crate) node_children_buffer: Buffer,
@@ -229,9 +229,9 @@ pub(crate) struct CacheUpdatePackage<'a> {
 
 #[derive(Clone, TypePath)]
 #[type_path = "shocovox::gpu::ShocoVoxRenderData"]
-pub struct BoxTreeRenderData {
+pub struct ContreeRenderData {
     /// Contains the properties of the Octree
-    pub(crate) boxtree_meta: BoxTreeMetaData,
+    pub(crate) contree_meta: ContreeMetaData,
 
     /// Usage information for nodes and bricks
     ///  _===============================================================_
@@ -315,12 +315,12 @@ pub(crate) struct VhxRenderNode {
 
 #[cfg(test)]
 mod types_wgpu_byte_compatibility_tests {
-    use super::{BoxTreeMetaData, Viewport};
+    use super::{ContreeMetaData, Viewport};
     use bevy::render::render_resource::encase::ShaderType;
 
     #[test]
     fn test_wgpu_compatibility() {
         Viewport::assert_uniform_compat();
-        BoxTreeMetaData::assert_uniform_compat();
+        ContreeMetaData::assert_uniform_compat();
     }
 }

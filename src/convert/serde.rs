@@ -1,4 +1,4 @@
-use crate::boxtree::{
+use crate::contree::{
     types::{NodeConnection, NodeData},
     {Albedo, ObjectPool, Octree},
 };
@@ -58,7 +58,7 @@ where
                 match __value {
                     "auto_simplify" => serde::__private::Ok(__Field::__field0),
                     "brick_dim" => serde::__private::Ok(__Field::__field1),
-                    "boxtree_size" => serde::__private::Ok(__Field::__field2),
+                    "contree_size" => serde::__private::Ok(__Field::__field2),
                     "nodes" => serde::__private::Ok(__Field::__field3),
                     "node_children" => serde::__private::Ok(__Field::__field4),
                     "voxel_color_palette" => serde::__private::Ok(__Field::__field5),
@@ -73,7 +73,7 @@ where
                 match __value {
                     b"auto_simplify" => serde::__private::Ok(__Field::__field0),
                     b"brick_dim" => serde::__private::Ok(__Field::__field1),
-                    b"boxtree_size" => serde::__private::Ok(__Field::__field2),
+                    b"contree_size" => serde::__private::Ok(__Field::__field2),
                     b"nodes" => serde::__private::Ok(__Field::__field3),
                     b"node_children" => serde::__private::Ok(__Field::__field4),
                     b"voxel_color_palette" => serde::__private::Ok(__Field::__field5),
@@ -195,7 +195,7 @@ where
                 serde::__private::Ok(Octree {
                     auto_simplify: __field0,
                     brick_dim: __field1,
-                    boxtree_size: __field2,
+                    contree_size: __field2,
                     nodes: __field3,
                     node_children: __field4,
                     voxel_color_palette: __field5,
@@ -253,7 +253,7 @@ where
                             if serde::__private::Option::is_some(&__field2) {
                                 return serde::__private::Err(
                                     <__A::Error as serde::de::Error>::duplicate_field(
-                                        "boxtree_size",
+                                        "contree_size",
                                     ),
                                 );
                             }
@@ -332,7 +332,7 @@ where
                 };
                 let __field2 = match __field2 {
                     serde::__private::Some(__field2) => __field2,
-                    serde::__private::None => serde::__private::de::missing_field("boxtree_size")?,
+                    serde::__private::None => serde::__private::de::missing_field("contree_size")?,
                 };
                 let __field3 = match __field3 {
                     serde::__private::Some(__field3) => __field3,
@@ -375,7 +375,7 @@ where
                 serde::__private::Ok(Octree {
                     auto_simplify: __field0,
                     brick_dim: __field1,
-                    boxtree_size: __field2,
+                    contree_size: __field2,
                     nodes: __field3,
                     node_children: __field4,
                     voxel_color_palette: __field5,
@@ -389,7 +389,7 @@ where
         const FIELDS: &'static [&'static str] = &[
             "auto_simplify",
             "brick_dim",
-            "boxtree_size",
+            "contree_size",
             "nodes",
             "node_children",
             "voxel_color_palette",

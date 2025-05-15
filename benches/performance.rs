@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main};
 
-use voxelhex::boxtree::{Color, Contree, V3c};
+use voxelhex::contree::{Color, Contree, V3c};
 
 #[cfg(feature = "raytracing")]
 use voxelhex::raytracing::Ray;
@@ -83,7 +83,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
             )
             .expect("Octree insert to suceeed");
         }
-        c.bench_function("boxtree insert", |b| {
+        c.bench_function("contree insert", |b| {
             b.iter(|| {
                 tree.insert(
                     &V3c::new(
@@ -97,7 +97,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
             });
         });
 
-        c.bench_function("boxtree clear", |b| {
+        c.bench_function("contree clear", |b| {
             b.iter(|| {
                 tree.clear(&V3c::new(
                     rng.gen_range(0..tree_size),
@@ -109,7 +109,7 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
             });
         });
 
-        c.bench_function("boxtree get", |b| {
+        c.bench_function("contree get", |b| {
             b.iter(|| {
                 tree.get(&V3c::new(
                     rng.gen_range(0..tree_size),
@@ -120,15 +120,15 @@ fn criterion_benchmark(c: &mut criterion::Criterion) {
         });
         #[cfg(feature = "bytecode")]
         {
-            c.bench_function("boxtree save", |b| {
+            c.bench_function("contree save", |b| {
                 b.iter(|| {
-                    tree.save("test_junk_boxtree").ok().unwrap();
+                    tree.save("test_junk_contree").ok().unwrap();
                 });
             });
 
-            c.bench_function("boxtree load", |b| {
+            c.bench_function("contree load", |b| {
                 b.iter(|| {
-                    let _tree_copy = Contree::<Color>::load("test_junk_boxtree").ok().unwrap();
+                    let _tree_copy = Contree::<Color>::load("test_junk_contree").ok().unwrap();
                 });
             });
         }

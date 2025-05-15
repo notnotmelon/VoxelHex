@@ -1,7 +1,7 @@
 use crate::{
-    boxtree::{
+    contree::{
         types::{ContreeError},
-        Color, Contree, BoxTreeEntry, V3c, VoxelData,
+        Color, Contree, ContreeEntry, V3c, VoxelData,
     },
     spatial::math::{convert_coordinate, CoordinateSystemType},
 };
@@ -225,18 +225,18 @@ impl<
             .ceil() as u32;
         let tree_size = 4_u32.pow(tree_size) * brick_dimension;
 
-        let mut shocovox_boxtree =
+        let mut shocovox_contree =
             Contree::<T>::new(tree_size, brick_dimension).unwrap_or_else(|err| {
                 panic!(
-                    "Expected to build a valid boxtree with dimension {:?} and brick dimension {:?}; Instead: {:?}",
+                    "Expected to build a valid contree with dimension {:?} and brick dimension {:?}; Instead: {:?}",
                     tree_size,
                     brick_dimension.to_owned(),
                     err
                 )
             });
 
-        shocovox_boxtree.load_vox_data_internal(&vox_data, &min_position);
-        Ok(shocovox_boxtree)
+        shocovox_contree.load_vox_data_internal(&vox_data, &min_position);
+        Ok(shocovox_contree)
     }
 
     /// Loads data from the given filename
@@ -324,17 +324,17 @@ impl<
                 );
                 match self.insert(
                     &V3c::from(voxel_position_lyup),
-                    BoxTreeEntry::Visual(&(vox_tree.palette[voxel.i as usize].into())),
+                    ContreeEntry::Visual(&(vox_tree.palette[voxel.i as usize].into())),
                 ) {
                     Ok(_) => {}
-                    Err(boxtree_error) => match boxtree_error {
+                    Err(contree_error) => match contree_error {
                         ContreeError::InvalidPosition { .. } => {
                             panic!(
-                                "inserting into boxtree at at invalid position: {:?}",
-                                boxtree_error
+                                "inserting into contree at at invalid position: {:?}",
+                                contree_error
                             )
                         }
-                        _ => panic!("inserting into boxtree yielded: {:?}", boxtree_error),
+                        _ => panic!("inserting into contree yielded: {:?}", contree_error),
                     },
                 }
             }
@@ -348,7 +348,7 @@ impl<
 }
 
 #[cfg(test)]
-mod boxtree_tests {
+mod contree_tests {
     use super::parse_rotation_matrix;
     use nalgebra::Matrix3;
 

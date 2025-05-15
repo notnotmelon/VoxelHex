@@ -5,9 +5,9 @@ pub mod insert;
 mod tests;
 
 use crate::{
-    boxtree::{
+    contree::{
         child_sectant_for,
-        types::{BoxTreeEntry, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
+        types::{ContreeEntry, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
         Color, Contree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -54,10 +54,10 @@ impl<
     /// Since unused colors are not removed from the palette, possible "pollution" is possible,
     /// where unused colors remain in the palette.
     /// * Returns with the resulting PaletteIndexValues Entry
-    pub(crate) fn add_to_palette(&mut self, entry: &BoxTreeEntry<T>) -> PaletteIndexValues {
+    pub(crate) fn add_to_palette(&mut self, entry: &ContreeEntry<T>) -> PaletteIndexValues {
         match entry {
-            BoxTreeEntry::Empty => empty_marker::<PaletteIndexValues>(),
-            BoxTreeEntry::Visual(albedo) => {
+            ContreeEntry::Empty => empty_marker::<PaletteIndexValues>(),
+            ContreeEntry::Visual(albedo) => {
                 if **albedo == Color::zero() {
                     return empty_marker();
                 }
@@ -77,7 +77,7 @@ impl<
                 );
                 VoxelContent::pix_visual(albedo_index as u16)
             }
-            BoxTreeEntry::Informative(data) => {
+            ContreeEntry::Informative(data) => {
                 if data.is_empty() {
                     return empty_marker();
                 }
@@ -97,11 +97,11 @@ impl<
                 );
                 VoxelContent::pix_informal(data_index as u16)
             }
-            BoxTreeEntry::Complex(albedo, data) => {
+            ContreeEntry::Complex(albedo, data) => {
                 if **albedo == Color::zero() {
-                    return self.add_to_palette(&BoxTreeEntry::Informative(*data));
+                    return self.add_to_palette(&ContreeEntry::Informative(*data));
                 } else if data.is_empty() {
-                    return self.add_to_palette(&BoxTreeEntry::Visual(albedo));
+                    return self.add_to_palette(&ContreeEntry::Visual(albedo));
                 }
                 let potential_new_albedo_index = self.map_to_color_index_in_palette.keys().len();
                 let albedo_index = if let std::collections::hash_map::Entry::Vacant(e) =
@@ -174,7 +174,7 @@ impl<
         // and decide if the node content needs to be divided into bricks, and the update function to be called again
         match self.nodes.get_mut(node_key) {
             VoxelContent::Leaf(bricks) => {
-                // In case brick_dimension == boxtree size, the 0 can not be a leaf...
+                // In case brick_dimension == contree size, the 0 can not be a leaf...
                 debug_assert!(self.brick_dim < self.contree_size);
                 match &mut bricks[target_child_sectant] {
                     //If there is no brick in the target position of the leaf, create one
@@ -268,7 +268,7 @@ impl<
 
                             // Add a brick to the target sectant and update with the given data
                             let mut new_brick = vec![
-                                self.add_to_palette(&BoxTreeEntry::Empty);
+                                self.add_to_palette(&ContreeEntry::Empty);
                                 self.brick_dim.pow(3) as usize
                             ];
                             let update_size = Self::update_brick(

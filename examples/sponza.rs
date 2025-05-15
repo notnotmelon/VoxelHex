@@ -6,8 +6,8 @@ use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
-    boxtree::{Contree, V3c, V3cf32},
-    raytracing::{BoxTreeGPUHost, Ray, VhxViewSet, Viewport},
+    contree::{Contree, V3c, V3cf32},
+    raytracing::{ContreeGPUHost, Ray, VhxViewSet, Viewport},
 };
 
 #[cfg(feature = "bevy_wgpu")]
@@ -52,14 +52,14 @@ fn main() {
 
 #[cfg(feature = "bevy_wgpu")]
 fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
-    // fill boxtree with data
+    // fill contree with data
     let tree: Contree;
     let tree_path = "example_junk_sponza";
     if std::path::Path::new(tree_path).exists() {
         tree = Contree::load(&tree_path).ok().unwrap();
     } else {
         println!("Loading sponza.vox");
-        tree = match voxelhex::boxtree::Contree::load_vox_file(
+        tree = match voxelhex::contree::Contree::load_vox_file(
             "assets/models/sponza.vox",
             BRICK_DIMENSION,
         ) {
@@ -70,7 +70,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         tree.save(&tree_path).ok().unwrap();
     }
 
-    let mut host = BoxTreeGPUHost { tree };
+    let mut host = ContreeGPUHost { tree };
     let mut views = VhxViewSet::default();
     let view_index = host.create_new_view(
         &mut views,
@@ -165,7 +165,7 @@ fn set_viewport_for_camera(camera_query: Query<&mut PanOrbitCamera>, view_set: R
 #[cfg(feature = "bevy_wgpu")]
 fn handle_zoom(
     keys: Res<ButtonInput<KeyCode>>,
-    tree: ResMut<BoxTreeGPUHost>,
+    tree: ResMut<ContreeGPUHost>,
     view_set: ResMut<VhxViewSet>,
     mut images: ResMut<Assets<Image>>,
     mut camera_query: Query<&mut PanOrbitCamera>,

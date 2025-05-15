@@ -1,5 +1,5 @@
 use crate::{
-    boxtree::V3c,
+    contree::V3c,
     spatial::{
         math::FLOAT_ERROR_TOLERANCE,
         raytracing::{plane_line_intersection, Ray},
@@ -73,9 +73,9 @@ mod wgpu_tests {
 }
 
 #[cfg(test)]
-mod boxtree_raytracing_tests {
+mod contree_raytracing_tests {
     use crate::{
-        boxtree::{Color, Contree, BoxTreeEntry, V3c},
+        contree::{Color, Contree, ContreeEntry, V3c},
         raytracing::tests::get_step_to_next_sibling,
         spatial::{math::FLOAT_ERROR_TOLERANCE, raytracing::Ray, Cube},
         voxel_data,
@@ -354,7 +354,7 @@ mod boxtree_raytracing_tests {
     }
 
     #[test]
-    fn test_edge_case_ray_behind_boxtree() {
+    fn test_edge_case_ray_behind_contree() {
         let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
         tree.insert(&V3c::new(0, 3, 0), voxel_data!(&5))
             .ok()

@@ -1,13 +1,13 @@
-use crate::{boxtree::BOX_NODE_CHILDREN_COUNT, object_pool::ObjectPool};
+use crate::{contree::BOX_NODE_CHILDREN_COUNT, object_pool::ObjectPool};
 use std::{collections::HashMap, error::Error, hash::Hash};
 
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
-/// error types during usage or creation of the boxtree
+/// error types during usage or creation of the contree
 #[derive(Debug)]
 pub enum ContreeError {
-    /// Octree creation was attempted with an invalid boxtree size
+    /// Octree creation was attempted with an invalid contree size
     InvalidSize(u32),
 
     /// Octree creation was attempted with an invalid brick dimension
@@ -21,17 +21,17 @@ pub enum ContreeError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BoxTreeEntry<'a, T: VoxelData> {
-    /// No information available in boxtree query
+pub enum ContreeEntry<'a, T: VoxelData> {
+    /// No information available in contree query
     Empty,
 
-    /// Albedo data is available in boxtree query
+    /// Albedo data is available in contree query
     Visual(&'a Color),
 
-    /// User data is avaliable in boxtree query
+    /// User data is avaliable in contree query
     Informative(&'a T),
 
-    /// Both user data and color information is available in boxtree query
+    /// Both user data and color information is available in contree query
     Complex(&'a Color, &'a T),
 }
 
@@ -95,7 +95,7 @@ pub(crate) type PaletteIndexValues = u32;
 
 /// Sparse contree of Voxel Bricks, where each leaf node contains a brick of voxels.
 /// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
-/// A Brick can be indexed directly, as opposed to the boxtree which is essentially a
+/// A Brick can be indexed directly, as opposed to the contree which is essentially a
 /// tree-graph where each node has 64 children.
 #[cfg_attr(feature = "serialization", derive(Serialize))]
 #[derive(Clone)]
@@ -106,7 +106,7 @@ where
     /// Size of one brick in a leaf node (dim^3)
     pub(crate) brick_dim: u32,
 
-    /// Extent of the boxtree
+    /// Extent of the contree
     pub(crate) contree_size: u32,
 
     /// Storing data at each position through palette index values
@@ -115,7 +115,7 @@ where
     /// Node Connections
     pub(crate) node_children: Vec<VoxelChildren>,
 
-    /// The albedo colors used by the boxtree. Maximum 65535 colors can be used at once
+    /// The albedo colors used by the contree. Maximum 65535 colors can be used at once
     /// because of a limitation on GPU raytracing, to spare space index values refering the palettes
     /// are stored on 2 Bytes
     pub(crate) voxel_color_palette: Vec<Color>, // referenced by @nodes
@@ -129,6 +129,6 @@ where
     #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]
     pub(crate) map_to_data_index_in_palette: HashMap<T, usize>,
 
-    /// Feature flag to enable/disable simplification attempts during boxtree update operations
+    /// Feature flag to enable/disable simplification attempts during contree update operations
     pub auto_simplify: bool,
 }

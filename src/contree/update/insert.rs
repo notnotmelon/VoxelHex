@@ -1,7 +1,7 @@
 use crate::{
-    boxtree::{
+    contree::{
         detail::child_sectant_for,
-        types::{BoxTreeEntry, BrickData, VoxelChildren, VoxelContent, ContreeError},
+        types::{ContreeEntry, BrickData, VoxelChildren, VoxelContent, ContreeError},
         Contree, VoxelData, BOX_NODE_DIMENSION,
     },
     spatial::{
@@ -12,7 +12,7 @@ use crate::{
 use std::hash::Hash;
 
 #[cfg(debug_assertions)]
-use crate::boxtree::BOX_NODE_CHILDREN_COUNT;
+use crate::contree::BOX_NODE_CHILDREN_COUNT;
 
 #[cfg(feature = "bytecode")]
 use bendy::{decoding::FromBencode, encoding::ToBencode};
@@ -42,11 +42,11 @@ impl<
     //  █████ █████  ░░█████░░█████████  ██████████ █████   █████    █████
     // ░░░░░ ░░░░░    ░░░░░  ░░░░░░░░░  ░░░░░░░░░░ ░░░░░   ░░░░░    ░░░░░
     //####################################################################################
-    /// Inserts the given data into the boxtree into the given voxel position
+    /// Inserts the given data into the contree into the given voxel position
     /// If there is already available data it overwrites it, except if all components are empty
     /// If all components are empty, this is a no-op, to erase data, please use @clear
     /// * `position` - the position to insert the data into, must be contained within the tree
-    pub fn insert<'a, E: Into<BoxTreeEntry<'a, T>>>(
+    pub fn insert<'a, E: Into<ContreeEntry<'a, T>>>(
         &mut self,
         position: &V3c<u32>,
         data: E,
@@ -57,12 +57,12 @@ impl<
         self.insert_internal(true, position, data.into())
     }
 
-    /// Inserts the given data for the boxtree in the given lod(level of detail) based on insert_size
+    /// Inserts the given data for the contree in the given lod(level of detail) based on insert_size
     /// If there is already available data it overwrites it, except if all components are empty
     /// * `position` - the position to insert the data into, must be contained within the tree
     /// * `insert_size` - The size to update. The value `brick_dimension * (2^x)` is used instead, when size is higher, than brick_dimension
     /// * `data` - The data to insert - cloned if needed
-    pub fn insert_at_lod<'a, E: Into<BoxTreeEntry<'a, T>>>(
+    pub fn insert_at_lod<'a, E: Into<ContreeEntry<'a, T>>>(
         &mut self,
         position: &V3c<u32>,
         insert_size: u32,
@@ -74,11 +74,11 @@ impl<
         self.insert_at_lod_internal(true, position, insert_size, data.into())
     }
 
-    /// Updates the given data at the the given voxel position inside the boxtree
+    /// Updates the given data at the the given voxel position inside the contree
     /// Already available data is untouched, if it is not specified in the entry
     /// If all components are empty, this is a no-op, to erase data, please use @clear
     /// * `position` - the position to insert the data into, must be contained within the tree
-    pub fn update<'a, E: Into<BoxTreeEntry<'a, T>>>(
+    pub fn update<'a, E: Into<ContreeEntry<'a, T>>>(
         &mut self,
         position: &V3c<u32>,
         data: E,
@@ -93,7 +93,7 @@ impl<
         &mut self,
         overwrite_if_empty: bool,
         position: &V3c<u32>,
-        data: BoxTreeEntry<T>,
+        data: ContreeEntry<T>,
     ) -> Result<(), ContreeError> {
         self.insert_at_lod_internal(overwrite_if_empty, position, 1, data)
     }
@@ -103,7 +103,7 @@ impl<
         overwrite_if_empty: bool,
         position_u32: &V3c<u32>,
         insert_size: u32,
-        data: BoxTreeEntry<T>,
+        data: ContreeEntry<T>,
     ) -> Result<(), ContreeError> {
         let root_bounds = Cube::root_bounds(self.contree_size as f32);
         let position = V3c::<f32>::from(*position_u32);

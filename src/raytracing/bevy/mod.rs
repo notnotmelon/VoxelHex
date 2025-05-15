@@ -4,10 +4,10 @@ mod pipeline;
 pub mod types;
 
 pub use crate::raytracing::bevy::types::{
-    BoxTreeGPUHost, BoxTreeGPUView, BoxTreeSpyGlass, RenderBevyPlugin, VhxViewSet, Viewport,
+    ContreeGPUHost, BoxTreeGPUView, BoxTreeSpyGlass, RenderBevyPlugin, VhxViewSet, Viewport,
 };
 use crate::{
-    boxtree::{Color, V3cf32, VoxelData},
+    contree::{Color, V3cf32, VoxelData},
     raytracing::bevy::{
         data::{handle_gpu_readback, sync_with_main_world, write_to_gpu},
         pipeline::prepare_bind_groups,
@@ -251,7 +251,7 @@ impl<
 {
     fn build(&self, app: &mut App) {
         app.add_plugins((
-            ExtractResourcePlugin::<BoxTreeGPUHost<T>>::default(),
+            ExtractResourcePlugin::<ContreeGPUHost<T>>::default(),
             ExtractResourcePlugin::<VhxViewSet>::default(),
         ));
         app.add_systems(Update, handle_resolution_updates);

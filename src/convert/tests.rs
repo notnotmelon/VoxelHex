@@ -1,6 +1,6 @@
-use crate::boxtree::{
+use crate::contree::{
     types::{Color, BrickData, VoxelChildren, VoxelContent},
-    Contree, BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
+    Contree, ContreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
 
@@ -131,7 +131,7 @@ fn test_node_children_serialization() {
 }
 
 #[test]
-fn test_boxtree_file_io() {
+fn test_contree_file_io() {
     let red: Color = 0xFF0000FF.into();
     let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
 
@@ -144,8 +144,8 @@ fn test_boxtree_file_io() {
     tree.clear_at_lod(&V3c::new(0, 0, 0), 2).ok().unwrap();
 
     // save andd load into a new tree
-    tree.save("test_junk_boxtree").ok().unwrap();
-    let tree_copy = Contree::load("test_junk_boxtree").ok().unwrap();
+    tree.save("test_junk_contree").ok().unwrap();
+    let tree_copy = Contree::load("test_junk_contree").ok().unwrap();
 
     let mut hits = 0;
     for x in 0..4 {
@@ -154,7 +154,7 @@ fn test_boxtree_file_io() {
                 assert!(tree.get(&V3c::new(x, y, z)) == tree_copy.get(&V3c::new(x, y, z)));
 
                 let hit = tree.get(&V3c::new(x, y, z));
-                if hit != BoxTreeEntry::Empty {
+                if hit != ContreeEntry::Empty {
                     assert!(
                         hit == (&red).into(),
                         "Hit mismatch at {:?}: {:?} <> {:?}",
@@ -174,7 +174,7 @@ fn test_boxtree_file_io() {
 }
 
 #[test]
-fn test_big_boxtree_serialize() {
+fn test_big_contree_serialize() {
     const TREE_SIZE: u32 = 256;
     const FILL_RANGE_START: u32 = 230;
     let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
@@ -218,7 +218,7 @@ fn test_big_boxtree_serialize() {
 }
 
 #[test]
-fn test_small_boxtree_serialize_where_dim_is_1() {
+fn test_small_contree_serialize_where_dim_is_1() {
     const TREE_SIZE: u32 = 4;
     let color: Color = 1.into();
     let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
@@ -235,7 +235,7 @@ fn test_small_boxtree_serialize_where_dim_is_1() {
 }
 
 #[test]
-fn test_boxtree_serialize_where_dim_is_1() {
+fn test_contree_serialize_where_dim_is_1() {
     const TREE_SIZE: u32 = 4;
     let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
     for x in 0..TREE_SIZE {
@@ -269,7 +269,7 @@ fn test_boxtree_serialize_where_dim_is_1() {
 }
 
 #[test]
-fn test_boxtree_serialize_where_dim_is_2() {
+fn test_contree_serialize_where_dim_is_2() {
     let mut tree: Contree = Contree::new(8, 2).ok().unwrap();
     for x in 0..4 {
         for y in 0..4 {
@@ -302,7 +302,7 @@ fn test_boxtree_serialize_where_dim_is_2() {
 }
 
 #[test]
-fn test_big_boxtree_serialize_where_dim_is_2() {
+fn test_big_contree_serialize_where_dim_is_2() {
     let mut tree: Contree = Contree::new(128, 2).ok().unwrap();
     for x in 100..128 {
         for y in 100..128 {

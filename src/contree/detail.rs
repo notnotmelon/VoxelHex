@@ -1,5 +1,5 @@
 use crate::{
-    boxtree::{
+    contree::{
         types::{Color, Contree, VoxelChildren, VoxelContent, VoxelData},
         BrickData, Cube, V3c, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },

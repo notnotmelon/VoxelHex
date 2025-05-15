@@ -176,7 +176,7 @@ fn node_stack_last(node_stack_meta: u32) -> u32 { // returns either with index o
     return (node_stack_meta & 0x0000FF00u) >> 8u;
 }
 
-//crate::boxtree:raytracing::get_dda_scale_factors
+//crate::contree:raytracing::get_dda_scale_factors
 fn get_dda_scale_factors(ray: ptr<function, Line>) -> vec3f {
     return vec3f(
         sqrt(
@@ -334,7 +334,7 @@ fn traverse_brick(
     direction_lut_index: u32,
     max_distance: f32,
 ) -> BrickHit {
-    let dimension = i32(boxtree_meta_data.tree_properties & 0x0000FFFF);
+    let dimension = i32(contree_meta_data.tree_properties & 0x0000FFFF);
     let voxels_count = i32(arrayLength(&voxels));
     var current_index = clamp(
         vec3i(vec3f(*ray_current_point - (*brick_bounds).min_position) // entry position in brick
@@ -466,7 +466,7 @@ fn probe_brick(
             if leaf_brick_hit.hit == true {
                 let unit_voxel_size = round(
                     (*brick_bounds).size
-                    / f32(boxtree_meta_data.tree_properties & 0x0000FFFF)
+                    / f32(contree_meta_data.tree_properties & 0x0000FFFF)
                 );
                 return OctreeRayIntersection(
                     true,
@@ -560,7 +560,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
         + u32(tmp_vec.z >= 1.) * 2u
         + u32(tmp_vec.y >= 1.) * 4u
     );
-    var max_distance = 2. * f32(boxtree_meta_data.boxtree_size);
+    var max_distance = 2. * f32(contree_meta_data.contree_size);
     if stage_data.stage == VHX_PREPASS_STAGE_ID {
         max_distance = max_distance_of_reliable_hit();
     }
@@ -568,9 +568,9 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
     var node_stack: array<u32, NODE_STACK_SIZE>;
     var node_stack_meta: u32 = 0;
     var ray_current_point = (*ray).origin + (*ray).direction * start_distance;
-    var current_bounds = Cube(vec3(0.), f32(boxtree_meta_data.boxtree_size));
+    var current_bounds = Cube(vec3(0.), f32(contree_meta_data.contree_size));
     var target_bounds = current_bounds;
-    var current_node_key = BOXTREE_ROOT_NODE_KEY;
+    var current_node_key = CONTREE_ROOT_NODE_KEY;
     var target_sectant = OOB_SECTANT;
     var missing_data_color = vec3f(0.);
 
@@ -590,21 +590,21 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
     while target_sectant != OOB_SECTANT && length(ray_current_point - (*ray).origin) < max_distance{
         /*// +++ DEBUG +++
         outer_safety += 1;
-        if(f32(outer_safety) > f32(boxtree_meta_data.boxtree_size) * sqrt(3.)) {
+        if(f32(outer_safety) > f32(contree_meta_data.contree_size) * sqrt(3.)) {
             return OctreeRayIntersection(
                 true, vec4f(1.,0.,0.,1.), vec3f(0.), vec3f(0., 0., 1.)
             );
         }
         */// --- DEBUG ---
-        current_node_key = BOXTREE_ROOT_NODE_KEY;
-        current_bounds.size = f32(boxtree_meta_data.boxtree_size);
+        current_node_key = CONTREE_ROOT_NODE_KEY;
+        current_bounds.size = f32(contree_meta_data.contree_size);
         current_bounds.min_position = vec3(0.);
         target_bounds.size = round(current_bounds.size / f32(BOX_NODE_DIMENSION));
         target_bounds.min_position = (
             current_bounds.min_position 
             + (SECTANT_OFFSET_REGION_LUT[target_sectant] * current_bounds.size)
         );
-        node_stack_push(&node_stack, &node_stack_meta, BOXTREE_ROOT_NODE_KEY);
+        node_stack_push(&node_stack, &node_stack_meta, CONTREE_ROOT_NODE_KEY);
         /*// +++ DEBUG +++
         var safety = 0;
         */// --- DEBUG ---
@@ -614,7 +614,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
         ) {
             /*// +++ DEBUG +++
             safety += 1;
-            if(f32(safety) > f32(boxtree_meta_data.boxtree_size) * sqrt(30.)) {
+            if(f32(safety) > f32(contree_meta_data.contree_size) * sqrt(30.)) {
                 return OctreeRayIntersection(
                     true, vec4f(0.,0.,1.,1.), vec3f(0.), vec3f(0., 0., 1.)
                 );
@@ -693,7 +693,7 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                         hit.color.b = 1.;
                     }
 
-                    let bound_size_ratio = f32(target_bounds.size) / f32(boxtree_meta_data.boxtree_size) * 5.;
+                    let bound_size_ratio = f32(target_bounds.size) / f32(contree_meta_data.contree_size) * 5.;
                     if( // Display current bounds boundaries
                         (abs(ray_current_point.x - target_bounds.min_position.x) < bound_size_ratio)
                         ||(abs(ray_current_point.y - target_bounds.min_position.y) < bound_size_ratio)
@@ -872,16 +872,16 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
         ray_current_point += (*ray).direction * 0.1;
         if(
             length(ray_current_point - (*ray).origin) < max_distance
-            && ray_current_point.x < f32(boxtree_meta_data.boxtree_size)
-            && ray_current_point.y < f32(boxtree_meta_data.boxtree_size)
-            && ray_current_point.z < f32(boxtree_meta_data.boxtree_size)
+            && ray_current_point.x < f32(contree_meta_data.contree_size)
+            && ray_current_point.y < f32(contree_meta_data.contree_size)
+            && ray_current_point.z < f32(contree_meta_data.contree_size)
             && ray_current_point.x > 0.
             && ray_current_point.y > 0.
             && ray_current_point.z > 0.
         ) {
             target_sectant = hash_region(
                 ray_current_point,
-                f32(boxtree_meta_data.boxtree_size)
+                f32(contree_meta_data.contree_size)
             );
         } else {
             target_sectant = OOB_SECTANT;
@@ -904,11 +904,11 @@ fn is_empty(e: PaletteIndexValues) -> bool {
     );
 }
 
-const BOXTREE_ROOT_NODE_KEY = 0u;
-struct BoxtreeMetaData {
+const CONTREE_ROOT_NODE_KEY = 0u;
+struct ContreeMetaData {
     ambient_light_color: vec3f,
     ambient_light_position: vec3f,
-    boxtree_size: u32,
+    contree_size: u32,
     tree_properties: u32,
 }
 
@@ -940,7 +940,7 @@ var<uniform> viewport: Viewport;
 var<storage, read_write> node_requests: array<atomic<u32>>;
 
 @group(2) @binding(0)
-var<uniform> boxtree_meta_data: BoxtreeMetaData;
+var<uniform> contree_meta_data: ContreeMetaData;
 
 @group(2) @binding(1)
 var<storage, read_write> used_bits: array<atomic<u32>>;
@@ -1024,13 +1024,13 @@ fn update(
 
         var ray_result = get_by_ray(&ray, start_distance);
         /*// +++ DEBUG +++
-        var root_bounds = Cube(vec3(0.,0.,0.), f32(boxtree_meta_data.boxtree_size));
+        var root_bounds = Cube(vec3(0.,0.,0.), f32(contree_meta_data.contree_size));
         let root_intersect = cube_intersect_ray(root_bounds, &ray);
         if root_intersect.hit == true {
             // Display the xyz axes
             if root_intersect. impact_hit == true {
-                let axes_length = f32(boxtree_meta_data.boxtree_size) / 2.;
-                let axes_width = f32(boxtree_meta_data.boxtree_size) / 50.;
+                let axes_length = f32(contree_meta_data.contree_size) / 2.;
+                let axes_width = f32(contree_meta_data.contree_size) / 50.;
                 let entry_point = (ray.origin + ray.direction * root_intersect.impact_distance);
                 if entry_point.x < axes_length && entry_point.y < axes_width && entry_point.z < axes_width {
                     rgb_result.r = 1.;
@@ -1042,7 +1042,7 @@ fn update(
                     rgb_result.b = 1.;
                 }
             }
-            rgb_result.b += 0.1; // Also color in the area of the boxtree
+            rgb_result.b += 0.1; // Also color in the area of the contree
         }
         */// --- DEBUG ---
         if ray_result.hit == true {

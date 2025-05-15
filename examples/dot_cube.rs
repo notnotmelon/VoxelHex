@@ -13,8 +13,8 @@ use iyes_perf_ui::{
 
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
-    boxtree::{Contree, BoxTreeEntry, V3c, V3cf32},
-    raytracing::{BoxTreeGPUHost, Ray, VhxViewSet, Viewport},
+    contree::{Contree, ContreeEntry, V3c, V3cf32},
+    raytracing::{ContreeGPUHost, Ray, VhxViewSet, Viewport},
 };
 
 #[cfg(feature = "bevy_wgpu")]
@@ -51,8 +51,8 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         TREE_SIZE as f32 * -2.,
     );
 
-    // fill boxtree with data
-    let mut tree: Contree = voxelhex::boxtree::Contree::new(TREE_SIZE, BRICK_DIMENSION)
+    // fill contree with data
+    let mut tree: Contree = voxelhex::contree::Contree::new(TREE_SIZE, BRICK_DIMENSION)
         .ok()
         .unwrap();
 
@@ -90,7 +90,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
                     .unwrap();
                     assert_eq!(
                         tree.get(&V3c::new(x, y, z)),
-                        BoxTreeEntry::Visual(
+                        ContreeEntry::Visual(
                             &Color::default()
                                 .with_red(r as u8)
                                 .with_green(g as u8)
@@ -103,7 +103,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         }
     }
 
-    let mut host = BoxTreeGPUHost { tree };
+    let mut host = ContreeGPUHost { tree };
     let mut views = VhxViewSet::default();
     let view_index = host.create_new_view(
         &mut views,
@@ -188,7 +188,7 @@ fn set_viewport_for_camera(camera_query: Query<&mut PanOrbitCamera>, view_set: R
 #[cfg(feature = "bevy_wgpu")]
 fn handle_zoom(
     keys: Res<ButtonInput<KeyCode>>,
-    tree: ResMut<BoxTreeGPUHost>,
+    tree: ResMut<ContreeGPUHost>,
     view_set: ResMut<VhxViewSet>,
     mut camera_query: Query<&mut PanOrbitCamera>,
 ) {

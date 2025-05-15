@@ -16,7 +16,7 @@ mod vector_tests {
 
 #[cfg(test)]
 mod detail_tests {
-    use crate::boxtree::V3c;
+    use crate::contree::V3c;
     use crate::spatial::{update_size_within, Cube};
 
     #[test]
@@ -52,7 +52,7 @@ mod sectant_tests {
 #[cfg(test)]
 mod bitmask_tests {
 
-    use crate::boxtree::V3c;
+    use crate::contree::V3c;
     use crate::spatial::math::{flat_projection, offset_sectant};
     use std::collections::HashSet;
 

@@ -1,11 +1,11 @@
 use crate::{
-    boxtree::{
+    contree::{
         types::{BrickData, VoxelContent},
         Contree, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
     raytracing::bevy::types::{
-        BoxTreeGPUDataHandler, BoxTreeRenderData, BrickOwnedBy, BrickUpdate, CacheUpdatePackage,
+        ContreeGPUDataHandler, ContreeRenderData, BrickOwnedBy, BrickUpdate, CacheUpdatePackage,
         VictimPointer,
     },
 };
@@ -83,7 +83,7 @@ impl VictimPointer {
     /// And finally the index range where nodes were updated
     fn first_available_node(
         &mut self,
-        render_data: &mut BoxTreeRenderData,
+        render_data: &mut ContreeRenderData,
     ) -> (usize, Option<(usize, u8)>, Range<usize>) {
         // If there is space left in the cache, use it all up
         if !self.is_full() {
@@ -137,7 +137,7 @@ impl VictimPointer {
     }
 }
 
-impl BoxTreeGPUDataHandler {
+impl ContreeGPUDataHandler {
     //##############################################################################
     //  ██████████     █████████   ███████████   █████████
     // ░░███░░░░███   ███░░░░░███ ░█░░░███░░░█  ███░░░░░███
@@ -522,7 +522,7 @@ impl BoxTreeGPUDataHandler {
     }
 
     /// Makes space for the requested brick and updates brick ownership if needed
-    /// * `tree` - The boxtree where the brick is found
+    /// * `tree` - The contree where the brick is found
     /// * `node_key` - The key for the requested leaf node, whoose child needs to be uploaded
     /// * `target_sectant` - The sectant where the target brick lies
     /// * `returns` - child descriptor, brick updates applied, nodes updated during insertion

@@ -9,7 +9,7 @@ pub mod raytracing;
 mod tests;
 
 use crate::{
-    boxtree::BOX_NODE_DIMENSION, spatial::lut::SECTANT_OFFSET_LUT, spatial::math::vector::V3c,
+    contree::BOX_NODE_DIMENSION, spatial::lut::SECTANT_OFFSET_LUT, spatial::math::vector::V3c,
 };
 
 /// Provides update scope within the given bounds

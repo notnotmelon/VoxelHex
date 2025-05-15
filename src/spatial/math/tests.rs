@@ -87,7 +87,7 @@ mod wgpu_tests {
 
 #[cfg(test)]
 mod bitmap_tests {
-    use crate::boxtree::V3c;
+    use crate::contree::V3c;
     use crate::spatial::math::set_occupied_bitmap_value;
 
     #[test]
@@ -190,7 +190,7 @@ mod bitmap_tests {
 #[cfg(feature = "dot_vox_support")]
 mod dot_vox_tests {
 
-    use crate::boxtree::V3c;
+    use crate::contree::V3c;
     use crate::spatial::math::convert_coordinate;
     use crate::spatial::math::CoordinateSystemType;
 

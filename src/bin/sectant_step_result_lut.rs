@@ -1,4 +1,4 @@
-use voxelhex::boxtree::{V3c, V3cf32};
+use voxelhex::contree::{V3c, V3cf32};
 
 pub(crate) const OOB_SECTANT: u8 = 64;
 pub(crate) const BOX_NODE_DIMENSION: usize = 4;

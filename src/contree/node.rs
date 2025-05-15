@@ -1,9 +1,9 @@
-use crate::boxtree::{
+use crate::contree::{
     empty_marker,
     types::{
         Color, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData,
     },
-    BoxTreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
+    ContreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use crate::spatial::math::{flat_projection, set_occupied_bitmap_value};
 use std::{
@@ -310,20 +310,20 @@ impl VoxelContent {
         index: &PaletteIndexValues,
         color_palette: &'a [Color],
         data_palette: &'a [V],
-    ) -> BoxTreeEntry<'a, V> {
+    ) -> ContreeEntry<'a, V> {
         if Self::pix_data_is_none(index) && Self::pix_color_is_none(index) {
-            return BoxTreeEntry::Empty;
+            return ContreeEntry::Empty;
         }
         if Self::pix_data_is_none(index) {
             debug_assert!(Self::pix_color_is_some(index));
             debug_assert!(Self::pix_color_index(index) < color_palette.len());
-            return BoxTreeEntry::Visual(&color_palette[Self::pix_color_index(index)]);
+            return ContreeEntry::Visual(&color_palette[Self::pix_color_index(index)]);
         }
 
         if Self::pix_color_is_none(index) {
             debug_assert!(Self::pix_data_is_some(index));
             debug_assert!(Self::pix_data_index(index) < data_palette.len());
-            return BoxTreeEntry::Informative(&data_palette[Self::pix_data_index(index)]);
+            return ContreeEntry::Informative(&data_palette[Self::pix_data_index(index)]);
         }
 
         debug_assert!(
@@ -340,7 +340,7 @@ impl VoxelContent {
             Self::pix_data_index(index),
             data_palette.len()
         );
-        BoxTreeEntry::Complex(
+        ContreeEntry::Complex(
             &color_palette[Self::pix_color_index(index)],
             &data_palette[Self::pix_data_index(index)],
         )
