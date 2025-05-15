@@ -1,5 +1,5 @@
 use crate::contree::{
-    types::{Color, BrickData, VoxelChildren, VoxelContent},
+    types::{Albedo, BrickData, VoxelChildren, VoxelContent},
     Contree, ContreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
@@ -132,7 +132,7 @@ fn test_node_children_serialization() {
 
 #[test]
 fn test_contree_file_io() {
-    let red: Color = 0xFF0000FF.into();
+    let red: Albedo = 0xFF0000FF.into();
     let mut tree: Contree = Contree::new(16, 1).ok().unwrap();
 
     // This will set the area equal to 64 1-sized nodes
@@ -182,7 +182,7 @@ fn test_big_contree_serialize() {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                let color = Color::from(x + y + z);
+                let color = Albedo::from(x + y + z);
                 tree.insert(&pos, &color).ok().unwrap();
 
                 if color.is_transparent() {
@@ -206,7 +206,7 @@ fn test_big_contree_serialize() {
         for y in FILL_RANGE_START..TREE_SIZE {
             for z in FILL_RANGE_START..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                let color = Color::from(x + y + z);
+                let color = Albedo::from(x + y + z);
 
                 if color.is_transparent() {
                     continue;
@@ -220,7 +220,7 @@ fn test_big_contree_serialize() {
 #[test]
 fn test_small_contree_serialize_where_dim_is_1() {
     const TREE_SIZE: u32 = 4;
-    let color: Color = 1.into();
+    let color: Albedo = 1.into();
     let mut tree: Contree = Contree::new(TREE_SIZE, 1).ok().unwrap();
     tree.insert(&V3c::new(0, 0, 0), &color).ok().unwrap();
 
@@ -242,11 +242,11 @@ fn test_contree_serialize_where_dim_is_1() {
         for y in 0..TREE_SIZE {
             for z in 0..TREE_SIZE {
                 let pos = V3c::new(x, y, z);
-                let albedo: Color = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
+                let albedo: Albedo = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
                 tree.insert(&pos, &albedo).ok().unwrap();
                 assert!(
                     tree.get(&pos)
-                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -261,7 +261,7 @@ fn test_contree_serialize_where_dim_is_1() {
                 let pos = V3c::new(x, y, z);
                 assert!(
                     deserialized.get(&pos)
-                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -275,11 +275,11 @@ fn test_contree_serialize_where_dim_is_2() {
         for y in 0..4 {
             for z in 0..4 {
                 let pos = V3c::new(x, y, z);
-                let albedo: Color = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
+                let albedo: Albedo = ((x << 24) + (y << 16) + (z << 8) + 0xFF).into();
                 tree.insert(&pos, &albedo).ok().unwrap();
                 assert!(
                     tree.get(&pos)
-                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -294,7 +294,7 @@ fn test_contree_serialize_where_dim_is_2() {
                 let pos = V3c::new(x, y, z);
                 assert!(
                     deserialized.get(&pos)
-                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }
@@ -308,7 +308,7 @@ fn test_big_contree_serialize_where_dim_is_2() {
         for y in 100..128 {
             for z in 100..128 {
                 let pos = V3c::new(x, y, z);
-                tree.insert(&pos, &Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF))
+                tree.insert(&pos, &Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF))
                     .ok()
                     .unwrap();
             }
@@ -324,7 +324,7 @@ fn test_big_contree_serialize_where_dim_is_2() {
                 let pos = V3c::new(x, y, z);
                 assert!(
                     deserialized.get(&pos)
-                        == (&Color::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
+                        == (&Albedo::from((x << 24) + (y << 16) + (z << 8) + 0xFF)).into()
                 );
             }
         }

@@ -7,7 +7,7 @@ pub use crate::raytracing::bevy::types::{
     ContreeGPUHost, BoxTreeGPUView, BoxTreeSpyGlass, RenderBevyPlugin, VhxViewSet, Viewport,
 };
 use crate::{
-    contree::{Color, V3cf32, VoxelData},
+    contree::{Albedo, V3cf32, VoxelData},
     raytracing::bevy::{
         data::{handle_gpu_readback, sync_with_main_world, write_to_gpu},
         pipeline::prepare_bind_groups,
@@ -32,9 +32,9 @@ use bevy::{
 };
 use std::hash::Hash;
 
-impl From<Vec4> for Color {
+impl From<Vec4> for Albedo {
     fn from(vec: Vec4) -> Self {
-        Color::default()
+        Albedo::default()
             .with_red((vec.x * 255.).min(255.) as u8)
             .with_green((vec.y * 255.).min(255.) as u8)
             .with_blue((vec.z * 255.).min(255.) as u8)
@@ -42,8 +42,8 @@ impl From<Vec4> for Color {
     }
 }
 
-impl From<Color> for Vec4 {
-    fn from(color: Color) -> Self {
+impl From<Albedo> for Vec4 {
+    fn from(color: Albedo) -> Self {
         Vec4::new(
             color.r as f32 / 255.,
             color.g as f32 / 255.,

@@ -1,5 +1,5 @@
 use voxelhex::{
-    contree::{Color, Contree, ContreeEntry, V3c, VoxelData},
+    contree::{Albedo, Contree, ContreeEntry, V3c, VoxelData},
     voxel_data,
 };
 
@@ -11,9 +11,9 @@ fn main() {
     let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
 
     // The visual data the contree contains are provided through the ALbedo type
-    let voxel_color_red: Color = 0xFF0000FF.into(); // RGBA hex codes can be used like this
-    let voxel_color_green: Color = 0x00FF00FF.into();
-    let voxel_color_blue: Color = 0x0000FFFF.into();
+    let voxel_color_red: Albedo = 0xFF0000FF.into(); // RGBA hex codes can be used like this
+    let voxel_color_green: Albedo = 0x00FF00FF.into();
+    let voxel_color_blue: Albedo = 0x0000FFFF.into();
 
     // Data can be inserted through a reference to a position inside bounds of the contree
     tree.insert(&V3c::new(0, 0, 0), &voxel_color_red)
@@ -28,7 +28,7 @@ fn main() {
     // Don't try to insert fully transparent colors though, it won't work!
     tree.insert(
         &V3c::new(0, 1, 0),
-        &Color::default()
+        &Albedo::default()
             .with_red(69)
             .with_green(69)
             .with_blue(69)
@@ -81,7 +81,7 @@ fn main() {
 
     // The below will do nothing
     tree.insert(&V3c::new(1, 0, 0), voxel_data!()).ok().unwrap();
-    tree.insert(&V3c::new(1, 0, 0), &Color::default())
+    tree.insert(&V3c::new(1, 0, 0), &Albedo::default())
         .ok()
         .unwrap();
 

@@ -2,7 +2,7 @@ use crate::contree::types::PaletteIndexValues;
 use crate::contree::BOX_NODE_CHILDREN_COUNT;
 use crate::contree::{
     types::{BrickData, VoxelChildren, VoxelContent},
-    Color, Contree,
+    Albedo, Contree,
 };
 use crate::object_pool::ObjectPool;
 use bendy::{
@@ -29,7 +29,7 @@ use std::{collections::HashMap, hash::Hash};
 //  ░░█████████  ░░░███████░   █████  ░░█████    █████    ██████████ █████  ░░█████    █████
 //   ░░░░░░░░░     ░░░░░░░    ░░░░░    ░░░░░    ░░░░░    ░░░░░░░░░░ ░░░░░    ░░░░░    ░░░░░
 //####################################################################################
-impl ToBencode for Color {
+impl ToBencode for Albedo {
     const MAX_DEPTH: usize = 2;
     fn encode(&self, encoder: SingleItemEncoder) -> Result<(), BencodeError> {
         encoder.emit_list(|e| {
@@ -41,7 +41,7 @@ impl ToBencode for Color {
     }
 }
 
-impl FromBencode for Color {
+impl FromBencode for Albedo {
     fn decode_bencode_object(data: Object) -> Result<Self, bendy::decoding::Error> {
         match data {
             Object::List(mut list) => {
@@ -463,7 +463,7 @@ where
                 let node_children = Vec::decode_bencode_object(list.next_object()?.unwrap())?;
 
                 let voxel_color_palette =
-                    Vec::<Color>::decode_bencode_object(list.next_object()?.unwrap())?;
+                    Vec::<Albedo>::decode_bencode_object(list.next_object()?.unwrap())?;
                 let mut map_to_color_index_in_palette = HashMap::new();
                 for (i, voxel_color) in voxel_color_palette.iter().enumerate() {
                     map_to_color_index_in_palette.insert(*voxel_color, i);

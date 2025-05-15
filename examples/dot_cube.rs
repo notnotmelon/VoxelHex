@@ -45,6 +45,8 @@ fn main() {
 
 #[cfg(feature = "bevy_wgpu")]
 fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
+    use voxelhex::contree::Albedo;
+
     let origin = V3c::new(
         TREE_SIZE as f32 * 2.,
         TREE_SIZE as f32 / 2.,
@@ -80,7 +82,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
                     };
                     tree.insert(
                         &V3c::new(x, y, z),
-                        &Color::default()
+                        &Albedo::default()
                             .with_red(r as u8)
                             .with_green(g as u8)
                             .with_blue(b as u8)
@@ -91,7 +93,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
                     assert_eq!(
                         tree.get(&V3c::new(x, y, z)),
                         ContreeEntry::Visual(
-                            &Color::default()
+                            &Albedo::default()
                                 .with_red(r as u8)
                                 .with_green(g as u8)
                                 .with_blue(b as u8)

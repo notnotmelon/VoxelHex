@@ -75,7 +75,7 @@ mod wgpu_tests {
 #[cfg(test)]
 mod contree_raytracing_tests {
     use crate::{
-        contree::{Color, Contree, ContreeEntry, V3c},
+        contree::{Albedo, Contree, ContreeEntry, V3c},
         raytracing::tests::get_step_to_next_sibling,
         spatial::{math::FLOAT_ERROR_TOLERANCE, raytracing::Ray, Cube},
         voxel_data,
@@ -103,7 +103,7 @@ mod contree_raytracing_tests {
                 &(V3c::from(cube.min_position) + V3c::unit(cube.size as f32) * 0.5),
                 &mut rng,
             );
-            let scale_factors = Contree::<Color>::get_dda_scale_factors(&ray);
+            let scale_factors = Contree::<Albedo>::get_dda_scale_factors(&ray);
             let mut current_point = ray.point_at(
                 cube.intersect_ray(&ray)
                     .unwrap()
@@ -114,7 +114,7 @@ mod contree_raytracing_tests {
             assert!(
                 FLOAT_ERROR_TOLERANCE
                     > (get_step_to_next_sibling(&cube, &ray)
-                        - Contree::<Color>::dda_step_to_next_sibling(
+                        - Contree::<Albedo>::dda_step_to_next_sibling(
                             &ray,
                             &mut current_point,
                             &cube,
@@ -249,27 +249,27 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_unreachable() {
         let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
-        tree.insert(&V3c::new(3, 0, 0), &Color::from(0).into())
+        tree.insert(&V3c::new(3, 0, 0), &Albedo::from(0).into())
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(3, 3, 0), &Color::from(1).into())
+        tree.insert(&V3c::new(3, 3, 0), &Albedo::from(1).into())
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(0, 3, 0), &Color::from(2).into())
+        tree.insert(&V3c::new(0, 3, 0), &Albedo::from(2).into())
             .ok()
             .unwrap();
 
         for y in 0..4 {
-            tree.insert(&V3c::new(0, y, y), &Color::from(3))
+            tree.insert(&V3c::new(0, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(1, y, y), &Color::from(3))
+            tree.insert(&V3c::new(1, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(2, y, y), &Color::from(3))
+            tree.insert(&V3c::new(2, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(3, y, y), &Color::from(3))
+            tree.insert(&V3c::new(3, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
         }
@@ -292,7 +292,7 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_empty_line_in_middle() {
         let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
-        tree.insert(&V3c::new(2, 1, 1), &Color::from(3).into())
+        tree.insert(&V3c::new(2, 1, 1), &Albedo::from(3).into())
             .ok();
 
         let ray = Ray {
@@ -313,27 +313,27 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_zero_advance() {
         let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
-        tree.insert(&V3c::new(3, 0, 0), &Color::from(0).into())
+        tree.insert(&V3c::new(3, 0, 0), &Albedo::from(0).into())
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(3, 3, 0), &Color::from(1).into())
+        tree.insert(&V3c::new(3, 3, 0), &Albedo::from(1).into())
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(0, 3, 0), &Color::from(2).into())
+        tree.insert(&V3c::new(0, 3, 0), &Albedo::from(2).into())
             .ok()
             .unwrap();
 
         for y in 0..4 {
-            tree.insert(&V3c::new(0, y, y), &Color::from(3))
+            tree.insert(&V3c::new(0, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(1, y, y), &Color::from(3))
+            tree.insert(&V3c::new(1, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(2, y, y), &Color::from(3))
+            tree.insert(&V3c::new(2, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(3, y, y), &Color::from(3))
+            tree.insert(&V3c::new(3, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
         }
@@ -376,7 +376,7 @@ mod contree_raytracing_tests {
         tree.insert(&V3c::new(0, 0, 0), voxel_data!(&5))
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(1, 0, 0), &Color::from(6).into())
+        tree.insert(&V3c::new(1, 0, 0), &Albedo::from(6).into())
             .ok()
             .unwrap();
 
@@ -394,7 +394,7 @@ mod contree_raytracing_tests {
         };
         assert!(tree
             .get_by_ray(&test_ray)
-            .is_some_and(|hit| hit.0 == (&Color::from(6)).into()));
+            .is_some_and(|hit| hit.0 == (&Albedo::from(6)).into()));
     }
 
     #[test]
@@ -483,27 +483,27 @@ mod contree_raytracing_tests {
     #[test]
     fn test_edge_case_loop_stuck() {
         let mut tree: Contree = Contree::new(4, 1).ok().unwrap();
-        tree.insert(&V3c::new(3, 0, 0), &Color::from(0).into())
+        tree.insert(&V3c::new(3, 0, 0), &Albedo::from(0).into())
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(3, 3, 0), &Color::from(1).into())
+        tree.insert(&V3c::new(3, 3, 0), &Albedo::from(1).into())
             .ok()
             .unwrap();
-        tree.insert(&V3c::new(0, 3, 0), &Color::from(2).into())
+        tree.insert(&V3c::new(0, 3, 0), &Albedo::from(2).into())
             .ok()
             .unwrap();
 
         for y in 0..4 {
-            tree.insert(&V3c::new(0, y, y), &Color::from(3))
+            tree.insert(&V3c::new(0, y, y), &Albedo::from(3))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(1, y, y), &Color::from(4).into())
+            tree.insert(&V3c::new(1, y, y), &Albedo::from(4).into())
                 .ok()
                 .unwrap();
             tree.insert(&V3c::new(2, y, y), voxel_data!(&5))
                 .ok()
                 .unwrap();
-            tree.insert(&V3c::new(3, y, y), &Color::from(6).into())
+            tree.insert(&V3c::new(3, y, y), &Albedo::from(6).into())
                 .ok()
                 .unwrap();
         }
@@ -599,7 +599,7 @@ mod contree_raytracing_tests {
         for x in 1..tree_size {
             for y in 1..tree_size {
                 for z in 1..tree_size {
-                    tree.insert(&V3c::new(x, y, z), &Color::from(z))
+                    tree.insert(&V3c::new(x, y, z), &Albedo::from(z))
                         .ok()
                         .unwrap();
                 }
@@ -619,7 +619,7 @@ mod contree_raytracing_tests {
             },
         };
         assert!(tree.get_by_ray(&ray).is_some_and(|v| {
-            v.0 == (&Color::from(1)).into() && v.2 == V3c::<f32>::new(0., 0., -1.)
+            v.0 == (&Albedo::from(1)).into() && v.2 == V3c::<f32>::new(0., 0., -1.)
         }));
     }
 
@@ -631,10 +631,10 @@ mod contree_raytracing_tests {
 
         let target = V3c::new(tree_size - 1, tree_size - 1, tree_size - 1);
 
-        tree.insert(&V3c::new(0, 0, 0), &Color::from(0x000000EE))
+        tree.insert(&V3c::new(0, 0, 0), &Albedo::from(0x000000EE))
             .ok()
             .unwrap();
-        tree.insert(&target, &Color::from(0x000000FF))
+        tree.insert(&target, &Albedo::from(0x000000FF))
             .ok()
             .unwrap();
 
@@ -647,7 +647,7 @@ mod contree_raytracing_tests {
         let ray = Ray { origin, direction };
         assert!(tree
             .get_by_ray(&ray)
-            .is_some_and(|v| { v.0 == (&Color::from(0x000000FF)).into() }));
+            .is_some_and(|v| { v.0 == (&Albedo::from(0x000000FF)).into() }));
     }
 
     #[test]
@@ -656,7 +656,7 @@ mod contree_raytracing_tests {
         const BRICK_DIMENSION: u32 = 2;
         let mut tree: Contree = Contree::new(tree_size, BRICK_DIMENSION).ok().unwrap();
 
-        tree.insert(&V3c::new(0, 0, 0), &Color::from(0x000000FF))
+        tree.insert(&V3c::new(0, 0, 0), &Albedo::from(0x000000FF))
             .ok()
             .unwrap();
 
@@ -676,7 +676,7 @@ mod contree_raytracing_tests {
         assert!(hit.is_some());
 
         let hit = hit.unwrap();
-        assert_eq!(hit.0, (&Color::from(0x000000FF)).into());
+        assert_eq!(hit.0, (&Albedo::from(0x000000FF)).into());
         assert!((hit.2 - V3c::<f32>::new(0., 0., 0.)).length() < 1.1);
     }
 
@@ -695,7 +695,7 @@ mod contree_raytracing_tests {
                     {
                         tree.insert(
                             &V3c::new(x, y, z),
-                            &Color::default()
+                            &Albedo::default()
                                 .with_red((255 as f32 * (x % 6) as f32 / 6.0) as u8)
                                 .with_green((255 as f32 * (y % 6) as f32 / 6.0) as u8)
                                 .with_blue((255 as f32 * (z % 6) as f32 / 6.0) as u8)
@@ -736,7 +736,7 @@ mod contree_raytracing_tests {
                     if (TREE_SIZE / 2) <= x && (TREE_SIZE / 2) <= y && (TREE_SIZE / 2) <= z {
                         tree.insert(
                             &V3c::new(x, y, z),
-                            &Color::default()
+                            &Albedo::default()
                                 .with_red((255 as f32 * x as f32 / TREE_SIZE as f32) as u8)
                                 .with_green((255 as f32 * y as f32 / TREE_SIZE as f32) as u8)
                                 .with_blue((255 as f32 * z as f32 / TREE_SIZE as f32) as u8)
@@ -779,7 +779,7 @@ mod contree_raytracing_tests {
                     {
                         tree.insert(
                             &V3c::new(x, y, z),
-                            &Color::default()
+                            &Albedo::default()
                                 .with_red((255 as f32 * x as f32 / TREE_SIZE as f32) as u8)
                                 .with_green((255 as f32 * y as f32 / TREE_SIZE as f32) as u8)
                                 .with_blue((255 as f32 * z as f32 / TREE_SIZE as f32) as u8)

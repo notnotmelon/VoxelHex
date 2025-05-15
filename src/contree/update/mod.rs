@@ -8,7 +8,7 @@ use crate::{
     contree::{
         child_sectant_for,
         types::{ContreeEntry, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
-        Color, Contree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
+        Albedo, Contree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
     spatial::{
@@ -58,7 +58,7 @@ impl<
         match entry {
             ContreeEntry::Empty => empty_marker::<PaletteIndexValues>(),
             ContreeEntry::Visual(albedo) => {
-                if **albedo == Color::zero() {
+                if **albedo == Albedo::zero() {
                     return empty_marker();
                 }
                 let potential_new_albedo_index = self.map_to_color_index_in_palette.keys().len();
@@ -98,7 +98,7 @@ impl<
                 VoxelContent::pix_informal(data_index as u16)
             }
             ContreeEntry::Complex(albedo, data) => {
-                if **albedo == Color::zero() {
+                if **albedo == Albedo::zero() {
                     return self.add_to_palette(&ContreeEntry::Informative(*data));
                 } else if data.is_empty() {
                     return self.add_to_palette(&ContreeEntry::Visual(albedo));

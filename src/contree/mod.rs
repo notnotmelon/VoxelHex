@@ -6,7 +6,7 @@ mod node;
 
 pub use crate::spatial::math::vector::{V3c, V3cf32};
 pub use types::{
-    Color, Contree, ContreeEntry, VoxelData,
+    Albedo, Contree, ContreeEntry, VoxelData,
 };
 
 use crate::{
@@ -46,8 +46,8 @@ use bendy::{decoding::FromBencode, encoding::ToBencode};
 //  ██████████ █████  ░░█████    █████    █████   █████    █████
 // ░░░░░░░░░░ ░░░░░    ░░░░░    ░░░░░    ░░░░░   ░░░░░    ░░░░░
 //####################################################################################
-impl<'a, T: VoxelData> From<(&'a Color, &'a T)> for ContreeEntry<'a, T> {
-    fn from((albedo, data): (&'a Color, &'a T)) -> Self {
+impl<'a, T: VoxelData> From<(&'a Albedo, &'a T)> for ContreeEntry<'a, T> {
+    fn from((albedo, data): (&'a Albedo, &'a T)) -> Self {
         ContreeEntry::Complex(albedo, data)
     }
 }
@@ -62,14 +62,14 @@ macro_rules! voxel_data {
     };
 }
 
-impl<'a, T: VoxelData> From<&'a Color> for ContreeEntry<'a, T> {
-    fn from(albedo: &'a Color) -> Self {
+impl<'a, T: VoxelData> From<&'a Albedo> for ContreeEntry<'a, T> {
+    fn from(albedo: &'a Albedo) -> Self {
         ContreeEntry::Visual(albedo)
     }
 }
 
 impl<'a, T: VoxelData> ContreeEntry<'a, T> {
-    pub fn albedo(&self) -> Option<&'a Color> {
+    pub fn albedo(&self) -> Option<&'a Albedo> {
         match self {
             ContreeEntry::Empty => None,
             ContreeEntry::Visual(albedo) => Some(albedo),

@@ -26,13 +26,13 @@ pub enum ContreeEntry<'a, T: VoxelData> {
     Empty,
 
     /// Albedo data is available in contree query
-    Visual(&'a Color),
+    Visual(&'a Albedo),
 
     /// User data is avaliable in contree query
     Informative(&'a T),
 
     /// Both user data and color information is available in contree query
-    Complex(&'a Color, &'a T),
+    Complex(&'a Albedo, &'a T),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,10 +81,10 @@ pub trait VoxelData {
     fn is_empty(&self) -> bool;
 }
 
-/// Linear RGBA color. Each channel ranges from 0-255.
+/// Color properties of a voxel
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Color {
+pub struct Albedo {
     pub r: u8,
     pub g: u8,
     pub b: u8,
@@ -93,7 +93,7 @@ pub struct Color {
 
 pub(crate) type PaletteIndexValues = u32;
 
-/// Sparse contree of Voxel Bricks, where each leaf node contains a brick of voxels.
+/// Sparse 64Tree of Voxel Bricks, where each leaf node contains a brick of voxels.
 /// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
 /// A Brick can be indexed directly, as opposed to the contree which is essentially a
 /// tree-graph where each node has 64 children.
@@ -118,12 +118,12 @@ where
     /// The albedo colors used by the contree. Maximum 65535 colors can be used at once
     /// because of a limitation on GPU raytracing, to spare space index values refering the palettes
     /// are stored on 2 Bytes
-    pub(crate) voxel_color_palette: Vec<Color>, // referenced by @nodes
+    pub(crate) voxel_color_palette: Vec<Albedo>, // referenced by @nodes
     pub(crate) voxel_data_palette: Vec<T>, // referenced by @nodes
 
     /// Cache variable to help find colors inside the color palette
     #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]
-    pub(crate) map_to_color_index_in_palette: HashMap<Color, usize>,
+    pub(crate) map_to_color_index_in_palette: HashMap<Albedo, usize>,
 
     /// Cache variable to help find user data in the palette
     #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]
