@@ -111,7 +111,7 @@ impl<'a, T: VoxelData> ContreeEntry<'a, T> {
 //  ░░░███████░   ░░█████████     █████    █████   █████ ██████████ ██████████
 //    ░░░░░░░      ░░░░░░░░░     ░░░░░    ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░░░░░░
 //####################################################################################
-pub(crate) const OOB_SECTANT: u8 = 64;
+
 pub(crate) const BOX_NODE_DIMENSION: usize = 4;
 pub(crate) const BOX_NODE_CHILDREN_COUNT: usize = 64;
 

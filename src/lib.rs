@@ -1,5 +1,6 @@
 mod object_pool;
 mod spatial;
+pub mod raytracing;
 
 pub mod contree;
 
@@ -9,6 +10,3 @@ pub mod contree;
     feature = "dot_vox_support"
 ))]
 pub mod convert;
-
-#[cfg(feature = "raytracing")]
-pub mod raytracing;

@@ -1,10 +1,6 @@
 /// As in: Look-up Tables
 pub mod lut;
-
 pub mod math;
-
-#[cfg(feature = "raytracing")]
-pub mod raytracing;
 
 mod tests;
 

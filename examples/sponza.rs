@@ -7,7 +7,7 @@ use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 #[cfg(feature = "bevy_wgpu")]
 use voxelhex::{
     contree::{Contree, V3c, V3cf32},
-    raytracing::{ContreeGPUHost, Ray, VhxViewSet, Viewport},
+    raytracing::{ContreeGPUHost, VhxViewSet, Viewport},
 };
 
 #[cfg(feature = "bevy_wgpu")]
@@ -16,9 +16,6 @@ use iyes_perf_ui::{
     ui::root::PerfUiRoot,
     PerfUiPlugin,
 };
-
-#[cfg(feature = "bevy_wgpu")]
-use image::{ImageBuffer, Rgb};
 
 #[cfg(feature = "bevy_wgpu")]
 const DISPLAY_RESOLUTION: [u32; 2] = [1920, 1080];
@@ -165,70 +162,12 @@ fn set_viewport_for_camera(camera_query: Query<&mut PanOrbitCamera>, view_set: R
 #[cfg(feature = "bevy_wgpu")]
 fn handle_zoom(
     keys: Res<ButtonInput<KeyCode>>,
-    tree: ResMut<ContreeGPUHost>,
     view_set: ResMut<VhxViewSet>,
     mut images: ResMut<Assets<Image>>,
     mut camera_query: Query<&mut PanOrbitCamera>,
     mut sprite_query: Query<&mut Sprite>,
 ) {
     let mut tree_view = view_set.views[0].lock().unwrap();
-
-    if keys.pressed(KeyCode::Tab) {
-        // Render the current view with CPU
-        let viewport_up_direction = V3c::new(0., 1., 0.);
-        let viewport_right_direction = viewport_up_direction
-            .cross(tree_view.spyglass.viewport().direction)
-            .normalized();
-        let pixel_width = tree_view.spyglass.view_frustum().x as f32 / DISPLAY_RESOLUTION[0] as f32;
-        let pixel_height =
-            tree_view.spyglass.view_frustum().y as f32 / DISPLAY_RESOLUTION[1] as f32;
-        let viewport_bottom_left = tree_view.spyglass.viewport().origin
-            + (tree_view.spyglass.viewport().direction * tree_view.spyglass.view_frustum().z)
-            - (viewport_up_direction * (tree_view.spyglass.view_frustum().y / 2.))
-            - (viewport_right_direction * (tree_view.spyglass.view_frustum().x / 2.));
-
-        // define light
-        let diffuse_light_normal = V3c::new(0., -1., 1.).normalized();
-        let mut img = ImageBuffer::new(DISPLAY_RESOLUTION[0], DISPLAY_RESOLUTION[1]);
-        // cast each ray for a hit
-        for x in 0..DISPLAY_RESOLUTION[0] {
-            for y in 0..DISPLAY_RESOLUTION[1] {
-                let actual_y_in_image = DISPLAY_RESOLUTION[1] - y - 1;
-                //from the origin of the camera to the current point of the viewport
-                let glass_point = viewport_bottom_left
-                    + viewport_right_direction * x as f32 * pixel_width
-                    + viewport_up_direction * y as f32 * pixel_height;
-                let ray = Ray {
-                    origin: tree_view.spyglass.viewport().origin,
-                    direction: (glass_point - tree_view.spyglass.viewport().origin).normalized(),
-                };
-
-                use std::io::Write;
-                std::io::stdout().flush().ok().unwrap();
-
-                if let Some(hit) = tree.tree.get_by_ray(&ray) {
-                    let (data, _, normal) = hit;
-                    //Because both vector should be normalized, the dot product should be 1*1*cos(angle)
-                    //That means it is in range -1, +1, which should be accounted for
-                    let diffuse_light_strength =
-                        1. - (normal.dot(&diffuse_light_normal) / 2. + 0.5);
-                    img.put_pixel(
-                        x,
-                        actual_y_in_image,
-                        Rgb([
-                            (data.albedo().unwrap().r as f32 * diffuse_light_strength) as u8,
-                            (data.albedo().unwrap().g as f32 * diffuse_light_strength) as u8,
-                            (data.albedo().unwrap().b as f32 * diffuse_light_strength) as u8,
-                        ]),
-                    );
-                } else {
-                    img.put_pixel(x, actual_y_in_image, Rgb([128, 128, 128]));
-                }
-            }
-        }
-
-        img.save("example_junk_cpu_render.png").ok().unwrap();
-    }
 
     if keys.pressed(KeyCode::Home) {
         tree_view.spyglass.viewport_mut().fov *= 1. + 0.09;
