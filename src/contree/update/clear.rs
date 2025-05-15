@@ -1,7 +1,7 @@
 use crate::{
     contree::{
         detail::child_sectant_for,
-        types::{BrickData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
+        types::{ChunkData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
         Contree, VoxelData, BOX_NODE_CHILDREN_COUNT, BOX_NODE_DIMENSION,
     },
     object_pool::empty_marker,
@@ -47,7 +47,7 @@ impl<
 
     /// Clears the data at the given position and lod size
     /// * `position` - the position to insert data into, must be contained within the tree
-    /// * `clear_size` - The size to update. The value `brick_dimension * (2^x)` is used instead, when size is higher, than brick_dimension
+    /// * `clear_size` - The size to update. The value `chunk_dimension * (2^x)` is used instead, when size is higher, than chunk_dimension
     pub fn clear_at_lod(
         &mut self,
         position: &V3c<u32>,
@@ -124,7 +124,7 @@ impl<
                 break;
             }
 
-            if target_bounds.size > clear_size.max(self.brick_dim) as f32
+            if target_bounds.size > clear_size.max(self.chunk_dim) as f32
                 || self.nodes.key_is_valid(target_child_key)
             {
                 // iteration needs to go deeper, as current Node size is still larger, than the requested clear size
@@ -146,48 +146,48 @@ impl<
                             VoxelContent::Nothing | VoxelContent::Internal(_) => {
                                 panic!("Non-leaf node expected to be leaf!")
                             }
-                            VoxelContent::UniformLeaf(brick) => match brick {
-                                BrickData::Empty => true,
-                                BrickData::Solid(voxel) => VoxelContent::pix_points_to_empty(
+                            VoxelContent::UniformLeaf(chunk) => match chunk {
+                                ChunkData::Empty => true,
+                                ChunkData::Solid(voxel) => VoxelContent::pix_points_to_empty(
                                     voxel,
                                     &self.voxel_color_palette,
                                     &self.voxel_data_palette,
                                 ),
-                                BrickData::Parted(brick) => {
+                                ChunkData::Parted(chunk) => {
                                     let index_in_matrix =
                                         *position - V3c::from(current_bounds.min_position);
                                     let index_in_matrix = flat_projection(
                                         index_in_matrix.x as usize,
                                         index_in_matrix.y as usize,
                                         index_in_matrix.z as usize,
-                                        self.brick_dim as usize,
+                                        self.chunk_dim as usize,
                                     );
                                     VoxelContent::pix_points_to_empty(
-                                        &brick[index_in_matrix],
+                                        &chunk[index_in_matrix],
                                         &self.voxel_color_palette,
                                         &self.voxel_data_palette,
                                     )
                                 }
                             },
-                            VoxelContent::Leaf(bricks) => {
-                                match &bricks[target_child_sectant as usize] {
-                                    BrickData::Empty => true,
-                                    BrickData::Solid(voxel) => VoxelContent::pix_points_to_empty(
+                            VoxelContent::Leaf(chunks) => {
+                                match &chunks[target_child_sectant as usize] {
+                                    ChunkData::Empty => true,
+                                    ChunkData::Solid(voxel) => VoxelContent::pix_points_to_empty(
                                         voxel,
                                         &self.voxel_color_palette,
                                         &self.voxel_data_palette,
                                     ),
-                                    BrickData::Parted(brick) => {
+                                    ChunkData::Parted(chunk) => {
                                         let index_in_matrix =
                                             *position - V3c::from(current_bounds.min_position);
                                         let index_in_matrix = flat_projection(
                                             index_in_matrix.x as usize,
                                             index_in_matrix.y as usize,
                                             index_in_matrix.z as usize,
-                                            self.brick_dim as usize,
+                                            self.chunk_dim as usize,
                                         );
                                         VoxelContent::pix_points_to_empty(
-                                            &brick[index_in_matrix],
+                                            &chunk[index_in_matrix],
                                             &self.voxel_color_palette,
                                             &self.voxel_data_palette,
                                         )
@@ -211,10 +211,10 @@ impl<
                         // with its children having the same data as the current node, to keep integrity.
                         // It needs to be separated because it has an extent above DIM
                         debug_assert!(
-                            current_bounds.size > self.brick_dim as f32,
+                            current_bounds.size > self.chunk_dim as f32,
                             "Expected Leaf node to have an extent({:?}) above DIM({:?})!",
                             current_bounds.size,
-                            self.brick_dim
+                            self.chunk_dim
                         );
                         self.subdivide_leaf_to_nodes(
                             current_node_key,

@@ -216,21 +216,21 @@ impl<
         #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData,
     > Contree<T>
 {
-    pub fn load_vox_file(filename: &str, brick_dimension: u32) -> Result<Self, &'static str> {
+    pub fn load_vox_file(filename: &str, chunk_dimension: u32) -> Result<Self, &'static str> {
         let (vox_data, min_position, mut max_position) = Self::load_vox_file_internal(filename);
         max_position -= min_position;
         let max_position = max_position.x.max(max_position.y).max(max_position.z);
-        let tree_size = (max_position as f32 / brick_dimension as f32)
+        let tree_size = (max_position as f32 / chunk_dimension as f32)
             .log(4.)
             .ceil() as u32;
-        let tree_size = 4_u32.pow(tree_size) * brick_dimension;
+        let tree_size = 4_u32.pow(tree_size) * chunk_dimension;
 
         let mut shocovox_contree =
-            Contree::<T>::new(tree_size, brick_dimension).unwrap_or_else(|err| {
+            Contree::<T>::new(tree_size, chunk_dimension).unwrap_or_else(|err| {
                 panic!(
-                    "Expected to build a valid contree with dimension {:?} and brick dimension {:?}; Instead: {:?}",
+                    "Expected to build a valid contree with dimension {:?} and chunk dimension {:?}; Instead: {:?}",
                     tree_size,
-                    brick_dimension.to_owned(),
+                    chunk_dimension.to_owned(),
                     err
                 )
             });

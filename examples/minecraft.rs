@@ -21,7 +21,7 @@ use iyes_perf_ui::{
 const DISPLAY_RESOLUTION: [u32; 2] = [1024, 768];
 
 #[cfg(feature = "bevy_wgpu")]
-const BRICK_DIMENSION: u32 = 32;
+const CHUNK_DIMENSION: u32 = 32;
 
 #[cfg(feature = "bevy_wgpu")]
 fn main() {
@@ -58,7 +58,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         println!("Loading minecraft.vox");
         tree = match voxelhex::contree::Contree::load_vox_file(
             "assets/models/minecraft.vox",
-            BRICK_DIMENSION,
+            CHUNK_DIMENSION,
         ) {
             Ok(tree_) => tree_,
             Err(message) => panic!("Parsing model file failed with message: {message}"),

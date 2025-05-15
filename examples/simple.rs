@@ -4,11 +4,11 @@ use voxelhex::{
 };
 
 fn main() {
-    // To create an empty contree the size and brick dimension needs to be set
+    // To create an empty contree the size and chunk dimension needs to be set
     const TREE_SIZE: u32 = 128; // The length of the edges of the cube the BoxTree covers ( number of voxels )
-    const BRICK_DIMENSION: u32 = 8; // How big should one "group of voxels" should be refer to docs @Octree::new
+    const CHUNK_DIMENSION: u32 = 8; // How big should one "group of voxels" should be refer to docs @Octree::new
                                     // If you have no idea what it should be, 32 is a good reference
-    let mut tree: Contree = Contree::new(TREE_SIZE, BRICK_DIMENSION).ok().unwrap();
+    let mut tree: Contree = Contree::new(TREE_SIZE, CHUNK_DIMENSION).ok().unwrap();
 
     // The visual data the contree contains are provided through the ALbedo type
     let voxel_color_red: Albedo = 0xFF0000FF.into(); // RGBA hex codes can be used like this
@@ -127,7 +127,7 @@ fn main() {
     // It sounds a bit tricky at first:
     // - One node contains 64 other nodes
     // - Nodes are packed together into 4x4x4 cubes
-    // - A leaf node is the size of 64 voxel bricks, strucutre as above
+    // - A leaf node is the size of 64 voxel chunks, strucutre as above
     // - Any node might be a leaf node
     // - Each node starts at a multiple of its size, which is the smallest corner of it
     // - e.g. a node of size 16 might start at (0,0,0), (16,0,0), (0,16,0), (0,0,32), ... etc..

@@ -1,7 +1,7 @@
 use crate::contree::{
     empty_marker,
     types::{
-        Albedo, BrickData, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData,
+        Albedo, ChunkData, VoxelChildren, VoxelContent, PaletteIndexValues, VoxelData,
     },
     ContreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
@@ -98,28 +98,28 @@ impl VoxelChildren {
 //  ██████████   █████   █████    █████    █████   █████
 // ░░░░░░░░░░   ░░░░░   ░░░░░    ░░░░░    ░░░░░   ░░░░░
 //####################################################################################
-impl BrickData {
-    /// Calculates the Occupancy bitmap for the given Voxel brick
-    pub(crate) fn calculate_brick_occupied_bits<V: VoxelData>(
-        brick: &[PaletteIndexValues],
-        brick_dimension: usize,
+impl ChunkData {
+    /// Calculates the Occupancy bitmap for the given Voxel chunk
+    pub(crate) fn calculate_chunk_occupied_bits<V: VoxelData>(
+        chunk: &[PaletteIndexValues],
+        chunk_dimension: usize,
         color_palette: &[Albedo],
         data_palette: &[V],
     ) -> u64 {
         let mut bitmap = 0;
-        for x in 0..brick_dimension {
-            for y in 0..brick_dimension {
-                for z in 0..brick_dimension {
-                    let flat_index = flat_projection(x, y, z, brick_dimension);
+        for x in 0..chunk_dimension {
+            for y in 0..chunk_dimension {
+                for z in 0..chunk_dimension {
+                    let flat_index = flat_projection(x, y, z, chunk_dimension);
                     if !VoxelContent::pix_points_to_empty(
-                        &brick[flat_index],
+                        &chunk[flat_index],
                         color_palette,
                         data_palette,
                     ) {
                         set_occupied_bitmap_value(
                             &V3c::new(x, y, z),
                             1,
-                            brick_dimension,
+                            chunk_dimension,
                             true,
                             &mut bitmap,
                         );
@@ -133,22 +133,22 @@ impl BrickData {
     /// Calculates the occupancy bitmap based on self
     pub(crate) fn calculate_occupied_bits<V: VoxelData>(
         &self,
-        brick_dimension: usize,
+        chunk_dimension: usize,
         color_palette: &[Albedo],
         data_palette: &[V],
     ) -> u64 {
         match self {
-            BrickData::Empty => 0,
-            BrickData::Solid(voxel) => {
+            ChunkData::Empty => 0,
+            ChunkData::Solid(voxel) => {
                 if VoxelContent::pix_points_to_empty(voxel, color_palette, data_palette) {
                     0
                 } else {
                     u64::MAX
                 }
             }
-            BrickData::Parted(brick) => Self::calculate_brick_occupied_bits(
-                brick,
-                brick_dimension,
+            ChunkData::Parted(chunk) => Self::calculate_chunk_occupied_bits(
+                chunk,
+                chunk_dimension,
                 color_palette,
                 data_palette,
             ),
@@ -158,15 +158,15 @@ impl BrickData {
     /// In case all contained voxels are the same, returns with a reference to the data
     pub(crate) fn get_homogeneous_data(&self) -> Option<&PaletteIndexValues> {
         match self {
-            BrickData::Empty => None,
-            BrickData::Solid(voxel) => Some(voxel),
-            BrickData::Parted(brick) => {
-                for voxel in brick.iter() {
-                    if *voxel != brick[0] {
+            ChunkData::Empty => None,
+            ChunkData::Solid(voxel) => Some(voxel),
+            ChunkData::Parted(chunk) => {
+                for voxel in chunk.iter() {
+                    if *voxel != chunk[0] {
                         return None;
                     }
                 }
-                Some(&brick[0])
+                Some(&chunk[0])
             }
         }
     }
@@ -177,12 +177,12 @@ impl BrickData {
         data_palette: &[V],
     ) -> bool {
         match self {
-            BrickData::Empty => true,
-            BrickData::Solid(voxel) => {
+            ChunkData::Empty => true,
+            ChunkData::Solid(voxel) => {
                 VoxelContent::pix_points_to_empty(voxel, color_palette, data_palette)
             }
-            BrickData::Parted(brick) => {
-                for voxel in brick.iter() {
+            ChunkData::Parted(chunk) => {
+                for voxel in chunk.iter() {
                     if !VoxelContent::pix_points_to_empty(voxel, color_palette, data_palette) {
                         return false;
                     }
@@ -192,7 +192,7 @@ impl BrickData {
         }
     }
 
-    /// Tries to simplify brick data, returns true if the view was simplified during function call
+    /// Tries to simplify chunk data, returns true if the view was simplified during function call
     pub(crate) fn simplify<V: VoxelData>(
         &mut self,
         color_palette: &[Albedo],
@@ -200,9 +200,9 @@ impl BrickData {
     ) -> bool {
         if let Some(homogeneous_type) = self.get_homogeneous_data() {
             if VoxelContent::pix_points_to_empty(homogeneous_type, color_palette, data_palette) {
-                *self = BrickData::Empty;
+                *self = ChunkData::Empty;
             } else {
-                *self = BrickData::Solid(*homogeneous_type);
+                *self = ChunkData::Solid(*homogeneous_type);
             }
             true
         } else {
@@ -353,13 +353,13 @@ impl VoxelContent {
         data_palette: &[V],
     ) -> bool {
         match self {
-            VoxelContent::UniformLeaf(brick) => match brick {
-                BrickData::Empty => true,
-                BrickData::Solid(voxel) => {
+            VoxelContent::UniformLeaf(chunk) => match chunk {
+                ChunkData::Empty => true,
+                ChunkData::Solid(voxel) => {
                     Self::pix_points_to_empty(voxel, color_palette, data_palette)
                 }
-                BrickData::Parted(brick) => {
-                    for voxel in brick.iter() {
+                ChunkData::Parted(chunk) => {
+                    for voxel in chunk.iter() {
                         if !Self::pix_points_to_empty(voxel, color_palette, data_palette) {
                             return false;
                         }
@@ -367,19 +367,19 @@ impl VoxelContent {
                     true
                 }
             },
-            VoxelContent::Leaf(bricks) => {
-                for mat in bricks.iter() {
+            VoxelContent::Leaf(chunks) => {
+                for mat in chunks.iter() {
                     match mat {
-                        BrickData::Empty => {
+                        ChunkData::Empty => {
                             continue;
                         }
-                        BrickData::Solid(voxel) => {
+                        ChunkData::Solid(voxel) => {
                             if !Self::pix_points_to_empty(voxel, color_palette, data_palette) {
                                 return false;
                             }
                         }
-                        BrickData::Parted(brick) => {
-                            for voxel in brick.iter() {
+                        ChunkData::Parted(chunk) => {
+                            for voxel in chunk.iter() {
                                 if !Self::pix_points_to_empty(voxel, color_palette, data_palette) {
                                     return false;
                                 }
@@ -397,23 +397,23 @@ impl VoxelContent {
     /// Returns with true if all contained elements equal the given data
     pub(crate) fn is_all(&self, data: &PaletteIndexValues) -> bool {
         match self {
-            VoxelContent::UniformLeaf(brick) => match brick {
-                BrickData::Empty => false,
-                BrickData::Solid(voxel) => voxel == data,
-                BrickData::Parted(_brick) => {
-                    if let Some(homogeneous_type) = brick.get_homogeneous_data() {
+            VoxelContent::UniformLeaf(chunk) => match chunk {
+                ChunkData::Empty => false,
+                ChunkData::Solid(voxel) => voxel == data,
+                ChunkData::Parted(_chunk) => {
+                    if let Some(homogeneous_type) = chunk.get_homogeneous_data() {
                         homogeneous_type == data
                     } else {
                         false
                     }
                 }
             },
-            VoxelContent::Leaf(bricks) => {
-                for mat in bricks.iter() {
-                    let brick_is_all_data = match mat {
-                        BrickData::Empty => false,
-                        BrickData::Solid(voxel) => voxel == data,
-                        BrickData::Parted(_brick) => {
+            VoxelContent::Leaf(chunks) => {
+                for mat in chunks.iter() {
+                    let chunk_is_all_data = match mat {
+                        ChunkData::Empty => false,
+                        ChunkData::Solid(voxel) => voxel == data,
+                        ChunkData::Parted(_chunk) => {
                             if let Some(homogeneous_type) = mat.get_homogeneous_data() {
                                 homogeneous_type == data
                             } else {
@@ -421,7 +421,7 @@ impl VoxelContent {
                             }
                         }
                     };
-                    if !brick_is_all_data {
+                    if !chunk_is_all_data {
                         return false;
                     }
                 }
@@ -435,16 +435,16 @@ impl VoxelContent {
         match self {
             VoxelContent::Nothing => matches!(other, VoxelContent::Nothing),
             VoxelContent::Internal(_) => false, // Internal nodes comparison doesn't make sense
-            VoxelContent::UniformLeaf(brick) => {
-                if let VoxelContent::UniformLeaf(obrick) = other {
-                    brick == obrick
+            VoxelContent::UniformLeaf(chunk) => {
+                if let VoxelContent::UniformLeaf(ochunk) = other {
+                    chunk == ochunk
                 } else {
                     false
                 }
             }
-            VoxelContent::Leaf(bricks) => {
-                if let VoxelContent::Leaf(obricks) = other {
-                    bricks == obricks
+            VoxelContent::Leaf(chunks) => {
+                if let VoxelContent::Leaf(ochunks) = other {
+                    chunks == ochunks
                 } else {
                     false
                 }

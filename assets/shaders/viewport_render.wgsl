@@ -20,8 +20,8 @@ const BOX_NODE_CHILDREN_COUNT = 64u;
 const FLOAT_ERROR_TOLERANCE = 0.00001;
 const COLOR_FOR_NODE_REQUEST_SENT = vec3f(0.5,0.3,0.0);
 const COLOR_FOR_NODE_REQUEST_FAIL = vec3f(0.7,0.2,0.0);
-const COLOR_FOR_BRICK_REQUEST_SENT = vec3f(0.3,0.1,0.0);
-const COLOR_FOR_BRICK_REQUEST_FAIL = vec3f(0.6,0.0,0.0);
+const COLOR_FOR_CHUNK_REQUEST_SENT = vec3f(0.3,0.1,0.0);
+const COLOR_FOR_CHUNK_REQUEST_FAIL = vec3f(0.6,0.0,0.0);
 const VHX_PREPASS_STAGE_ID = 1u;
 const VHX_RENDER_STAGE_ID = 2u;
 
@@ -246,22 +246,22 @@ fn set_node_used(node_key: u32) {
 }
 
 // Unique to this implementation, not adapted from rust code
-/// Sets the used bit true for the given brick
-fn set_brick_used(brick_index: u32) {
-    if 0 != ( used_bits[brick_index / 31] & (0x01u << (1u + (brick_index % 31u))) ) {
+/// Sets the used bit true for the given chunk
+fn set_chunk_used(chunk_index: u32) {
+    if 0 != ( used_bits[chunk_index / 31] & (0x01u << (1u + (chunk_index % 31u))) ) {
         // no need to set if already true
         return;
     }
 
     loop{
         let exchange_result = atomicCompareExchangeWeak(
-            &used_bits[brick_index / 31],
-            used_bits[brick_index / 31],
-            used_bits[brick_index / 31] | (0x01u << (1u + (brick_index % 31u)))
+            &used_bits[chunk_index / 31],
+            used_bits[chunk_index / 31],
+            used_bits[chunk_index / 31] | (0x01u << (1u + (chunk_index % 31u)))
         );
         if(
             exchange_result.exchanged
-            || 0 != ( exchange_result.old_value & (0x01u << (1u + (brick_index % 31u))) )
+            || 0 != ( exchange_result.old_value & (0x01u << (1u + (chunk_index % 31u))) )
         ){
             break;
         }
@@ -298,7 +298,7 @@ fn request_node(node_meta_index: u32, child_sectant: u32) -> bool {
     return true;
 }
 
-struct BrickHit{
+struct ChunkHit{
     hit: bool,
     index: vec3u,
     flat_index: u32,
@@ -325,25 +325,25 @@ fn max_distance_of_reliable_hit() -> f32 {
     ) - viewport.fov;
 }
 
-fn traverse_brick(
+fn traverse_chunk(
     ray: ptr<function, Line>,
     ray_current_point: ptr<function,vec3f>,
-    brick_start_index: u32,
-    brick_bounds: ptr<function, Cube>,
+    chunk_start_index: u32,
+    chunk_bounds: ptr<function, Cube>,
     ray_scale_factors: ptr<function, vec3f>,
     direction_lut_index: u32,
     max_distance: f32,
-) -> BrickHit {
+) -> ChunkHit {
     let dimension = i32(contree_meta_data.tree_properties & 0x0000FFFF);
     let voxels_count = i32(arrayLength(&voxels));
     var current_index = clamp(
-        vec3i(vec3f(*ray_current_point - (*brick_bounds).min_position) // entry position in brick
-        * f32(dimension) / (*brick_bounds).size),
+        vec3i(vec3f(*ray_current_point - (*chunk_bounds).min_position) // entry position in chunk
+        * f32(dimension) / (*chunk_bounds).size),
         vec3i(0),
         vec3i(dimension - 1)
     );
     var current_flat_index = (
-        i32(brick_start_index) * (dimension * dimension * dimension)
+        i32(chunk_start_index) * (dimension * dimension * dimension)
         + ( //crate::spatial::math::flat_projection
             current_index.x
             + (current_index.y * dimension)
@@ -352,10 +352,10 @@ fn traverse_brick(
     );
     var current_bounds = Cube(
         (
-            (*brick_bounds).min_position 
-            + vec3f(current_index) * round((*brick_bounds).size / f32(dimension))
+            (*chunk_bounds).min_position 
+            + vec3f(current_index) * round((*chunk_bounds).size / f32(dimension))
         ),
-        round((*brick_bounds).size / f32(dimension))
+        round((*chunk_bounds).size / f32(dimension))
     );
 
     /*// +++ DEBUG +++
@@ -366,7 +366,7 @@ fn traverse_brick(
         /*// +++ DEBUG +++
         safety += 1u;
         if(safety > u32(f32(dimension) * sqrt(30.))) {
-            return BrickHit(false, vec3u(1, 1, 1), 0);
+            return ChunkHit(false, vec3u(1, 1, 1), 0);
         }
         */// --- DEBUG ---
         if current_index.x < 0
@@ -376,11 +376,11 @@ fn traverse_brick(
             || current_index.z < 0
             || current_index.z >= dimension
         {
-            return BrickHit(false, vec3u(), 0);
+            return ChunkHit(false, vec3u(), 0);
         }
 
         // step delta calculated from crate::spatial::math::flat_projection
-        // --> e.g. flat_delta_y = flat_projection(0, 1, 0, brick_dim);
+        // --> e.g. flat_delta_y = flat_projection(0, 1, 0, chunk_dim);
         current_flat_index += (
             i32(step.x)
             + i32(step.y) * dimension
@@ -389,16 +389,16 @@ fn traverse_brick(
 
         if current_flat_index >= voxels_count
         {
-            return BrickHit(false, vec3u(current_index), u32(current_flat_index));
+            return ChunkHit(false, vec3u(current_index), u32(current_flat_index));
         }
         if !is_empty(voxels[current_flat_index])
         {
-            return BrickHit(true, vec3u(current_index), u32(current_flat_index));
+            return ChunkHit(true, vec3u(current_index), u32(current_flat_index));
         }
         if stage_data.stage == VHX_PREPASS_STAGE_ID
             && length(*ray_current_point - (*ray).origin) >= max_distance
         {
-            return BrickHit(false, vec3u(current_index), u32(current_flat_index));
+            return ChunkHit(false, vec3u(current_index), u32(current_flat_index));
         }
 
         step = round(dda_step_to_next_sibling(
@@ -409,7 +409,7 @@ fn traverse_brick(
     }
 
     // Technically this line is unreachable
-    return BrickHit(false, vec3u(0), 0);
+    return ChunkHit(false, vec3u(0), 0);
 }
 
 struct OctreeRayIntersection {
@@ -420,61 +420,61 @@ struct OctreeRayIntersection {
 }
 const NO_RAY_INTERSECTION = OctreeRayIntersection( false, vec4f(), vec3f(), vec3f() );
 
-fn probe_brick(
+fn probe_chunk(
     ray: ptr<function, Line>,
     ray_current_point: ptr<function,vec3f>,
     leaf_node_key: u32,
-    brick_sectant: u32,
-    brick_bounds: ptr<function, Cube>,
+    chunk_sectant: u32,
+    chunk_bounds: ptr<function, Cube>,
     ray_scale_factors: ptr<function, vec3f>,
     direction_lut_index: u32,
     max_distance: f32,
 ) -> OctreeRayIntersection {
-    if(( // node is occupied at target child_sectant, meaning: brick is not empty
-        (brick_sectant < 32)
-        && (0u != (node_occupied_bits[leaf_node_key * 2] & (0x01u << brick_sectant) ))
+    if(( // node is occupied at target child_sectant, meaning: chunk is not empty
+        (chunk_sectant < 32)
+        && (0u != (node_occupied_bits[leaf_node_key * 2] & (0x01u << chunk_sectant) ))
     )||(
-        (brick_sectant >= 32)
-        && (0u != (node_occupied_bits[leaf_node_key * 2 + 1] & (0x01u << (brick_sectant - 32)) ))
+        (chunk_sectant >= 32)
+        && (0u != (node_occupied_bits[leaf_node_key * 2 + 1] & (0x01u << (chunk_sectant - 32)) ))
     )){
-        let brick_descriptor = node_children[
-            ((leaf_node_key * BOX_NODE_CHILDREN_COUNT) + brick_sectant)
+        let chunk_descriptor = node_children[
+            ((leaf_node_key * BOX_NODE_CHILDREN_COUNT) + chunk_sectant)
         ];
-        if(0 != (0x80000000 & brick_descriptor)) { // brick is solid
-            // Whole brick is solid, ray hits it at first connection
+        if(0 != (0x80000000 & chunk_descriptor)) { // chunk is solid
+            // Whole chunk is solid, ray hits it at first connection
             return OctreeRayIntersection(
                 true,
-                color_palette[brick_descriptor & 0x0000FFFF], // Ray color is stored inside color_palette, it's not a brick index in this case
+                color_palette[chunk_descriptor & 0x0000FFFF], // Ray color is stored inside color_palette, it's not a chunk index in this case
                 *ray_current_point,
-                cube_impact_normal(*brick_bounds, *ray_current_point)
+                cube_impact_normal(*chunk_bounds, *ray_current_point)
             );
-        } else { // brick is parted
-            set_brick_used(brick_descriptor & 0x0000FFFF);
-            let leaf_brick_hit = traverse_brick(
+        } else { // chunk is parted
+            set_chunk_used(chunk_descriptor & 0x0000FFFF);
+            let leaf_chunk_hit = traverse_chunk(
                 ray, ray_current_point,
-                brick_descriptor & 0x0000FFFF,
-                brick_bounds, ray_scale_factors, direction_lut_index,
+                chunk_descriptor & 0x0000FFFF,
+                chunk_bounds, ray_scale_factors, direction_lut_index,
                 max_distance
             );
 
             if stage_data.stage == VHX_PREPASS_STAGE_ID {
-                if leaf_brick_hit.hit == false && leaf_brick_hit.flat_index != 0 {
+                if leaf_chunk_hit.hit == false && leaf_chunk_hit.flat_index != 0 {
                     return OctreeRayIntersection(true, vec4f(0.), *ray_current_point, vec3f(0., 0., 1.));
                 }
             }
 
-            if leaf_brick_hit.hit == true {
+            if leaf_chunk_hit.hit == true {
                 let unit_voxel_size = round(
-                    (*brick_bounds).size
+                    (*chunk_bounds).size
                     / f32(contree_meta_data.tree_properties & 0x0000FFFF)
                 );
                 return OctreeRayIntersection(
                     true,
-                    color_palette[voxels[leaf_brick_hit.flat_index] & 0x0000FFFF],
+                    color_palette[voxels[leaf_chunk_hit.flat_index] & 0x0000FFFF],
                     *ray_current_point,
                     cube_impact_normal(
                         Cube(
-                            ((*brick_bounds).min_position + (vec3f(leaf_brick_hit.index) * unit_voxel_size)),
+                            ((*chunk_bounds).min_position + (vec3f(leaf_chunk_hit.index) * unit_voxel_size)),
                             unit_voxel_size,
                         ),
                         *ray_current_point
@@ -670,14 +670,14 @@ fn get_by_ray(ray: ptr<function, Line>, start_distance: f32) -> OctreeRayInterse
                 var hit: OctreeRayIntersection;
                 if ( 0 != (node_metadata[current_node_key / 8] & (0x01u << (8 + (current_node_key % 8u)))) ) {
                     // node is uniform
-                    hit = probe_brick(
+                    hit = probe_chunk(
                         ray, &ray_current_point,
                         current_node_key, 0u, &current_bounds,
                         &ray_scale_factors, direction_lut_index,
                         max_distance
                     );
                 } else { // node is a non-uniform leaf
-                    hit = probe_brick(
+                    hit = probe_chunk(
                         ray, &ray_current_point,
                         current_node_key, target_sectant, &target_bounds,
                         &ray_scale_factors, direction_lut_index,
@@ -968,7 +968,7 @@ fn update(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
     @builtin(num_workgroups) num_workgroups: vec3<u32>,
 ) {
-    let ray_endpoint =
+    let ray_origin =
         (
             viewport.origin
             + (viewport.direction * viewport.fov)
@@ -988,7 +988,7 @@ fn update(
             * (1. - (f32(invocation_id.y) / f32(stage_data.output_resolution.y)))
         ) // Viewport up direction
         ;
-    var ray = Line(ray_endpoint, normalize(ray_endpoint - viewport.origin));
+    var ray = Line(ray_origin, normalize(ray_origin - viewport.origin));
     if stage_data.stage == VHX_PREPASS_STAGE_ID {
         // In preprocess, for every pixel in the depth texture, traverse the model until
         // either there's a hit or the voxels are too far away to determine 

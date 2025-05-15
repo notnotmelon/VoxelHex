@@ -126,7 +126,7 @@ mod bitmap_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expected coordinate 5 < brick size(4)")]
+    #[should_panic(expected = "Expected coordinate 5 < chunk size(4)")]
     fn test_occupancy_bitmap_aligned_dim_pos_overflow() {
         let mut mask = 0;
         set_occupied_bitmap_value(&V3c::new(5, 5, 5), 1, 4, true, &mut mask);
@@ -134,7 +134,7 @@ mod bitmap_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expected coordinate 9 < brick size(4)")]
+    #[should_panic(expected = "Expected coordinate 9 < chunk size(4)")]
     fn test_occupancy_bitmap_aligned_dim_pos_partial_overflow() {
         let mut mask = 0;
         set_occupied_bitmap_value(&V3c::new(3, 1, 9), 1, 4, true, &mut mask);
@@ -142,7 +142,7 @@ mod bitmap_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expected coordinate 2 < brick size(1)")]
+    #[should_panic(expected = "Expected coordinate 2 < chunk size(1)")]
     fn test_occupancy_bitmap_where_dim_is_1_pos_overflow() {
         let mut mask = u64::MAX;
         set_occupied_bitmap_value(&V3c::new(2, 2, 3), 1, 1, true, &mut mask);
@@ -150,7 +150,7 @@ mod bitmap_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expected coordinate 4 < brick size(2)")]
+    #[should_panic(expected = "Expected coordinate 4 < chunk size(2)")]
     fn test_occupancy_bitmap_where_dim_is_2_pos_overflow() {
         let mut mask = 0;
         set_occupied_bitmap_value(&V3c::new(4, 4, 4), 1, 2, true, &mut mask);

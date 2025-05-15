@@ -12,7 +12,7 @@ pub use types::{
 use crate::{
     contree::{
         detail::child_sectant_for,
-        types::{BrickData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
+        types::{ChunkData, VoxelChildren, VoxelContent, ContreeError, PaletteIndexValues},
     },
     object_pool::{empty_marker, ObjectPool},
     spatial::{
@@ -165,31 +165,31 @@ impl<
     }
 
     /// creates an contree with the given size
-    /// * `brick_dimension` - must be one of `(2^x)` and smaller than the size of the contree
-    /// * `size` - must be `brick_dimension * (4^x)`, e.g: brick_dimension == 2 --> size can be 8,32,128...
-    pub fn new(size: u32, brick_dimension: u32) -> Result<Self, ContreeError> {
-        if 0 == size || (brick_dimension as f32).log(2.0).fract() != 0.0 {
-            return Err(ContreeError::InvalidBrickDimension(brick_dimension));
+    /// * `chunk_dimension` - must be one of `(2^x)` and smaller than the size of the contree
+    /// * `size` - must be `chunk_dimension * (4^x)`, e.g: chunk_dimension == 2 --> size can be 8,32,128...
+    pub fn new(size: u32, chunk_dimension: u32) -> Result<Self, ContreeError> {
+        if 0 == size || (chunk_dimension as f32).log(2.0).fract() != 0.0 {
+            return Err(ContreeError::InvalidChunkDimension(chunk_dimension));
         }
-        if brick_dimension > size
+        if chunk_dimension > size
             || 0 == size
-            || (size as f32 / brick_dimension as f32).log(4.0).fract() != 0.0
+            || (size as f32 / chunk_dimension as f32).log(4.0).fract() != 0.0
         {
             return Err(ContreeError::InvalidSize(size));
         }
-        if size < (brick_dimension * BOX_NODE_DIMENSION as u32) {
+        if size < (chunk_dimension * BOX_NODE_DIMENSION as u32) {
             return Err(ContreeError::InvalidStructure(
-                "Octree size must be larger, than BOX_NODE_DIMENSION * brick dimension".into(),
+                "Octree size must be larger, than BOX_NODE_DIMENSION * chunk dimension".into(),
             ));
         }
-        let node_count_estimation = (size / brick_dimension).pow(3);
+        let node_count_estimation = (size / chunk_dimension).pow(3);
         let mut nodes = ObjectPool::with_capacity(node_count_estimation.min(1024) as usize);
         let root_node_key = nodes.push(VoxelContent::Nothing); // The first element is the root Node
         assert!(root_node_key == 0);
         Ok(Self {
             auto_simplify: true,
             contree_size: size,
-            brick_dim: brick_dimension,
+            chunk_dim: chunk_dimension,
             nodes,
             node_children: vec![VoxelChildren::default()],
             voxel_color_palette: vec![],
@@ -229,62 +229,62 @@ impl<
         loop {
             match self.nodes.get(current_node_key) {
                 VoxelContent::Nothing => return empty_marker(),
-                VoxelContent::Leaf(bricks) => {
-                    // In case brick_dimension == contree size, the root node can not be a leaf...
-                    debug_assert!(self.brick_dim < self.contree_size);
+                VoxelContent::Leaf(chunks) => {
+                    // In case chunk_dimension == contree size, the root node can not be a leaf...
+                    debug_assert!(self.chunk_dim < self.contree_size);
 
                     // Hash the position to the target child
                     let child_sectant_at_position = child_sectant_for(&current_bounds, &position);
 
                     // If the child exists, query it for the voxel
-                    match &bricks[child_sectant_at_position as usize] {
-                        BrickData::Empty => {
+                    match &chunks[child_sectant_at_position as usize] {
+                        ChunkData::Empty => {
                             return empty_marker();
                         }
-                        BrickData::Parted(brick) => {
+                        ChunkData::Parted(chunk) => {
                             current_bounds =
                                 Cube::child_bounds_for(&current_bounds, child_sectant_at_position);
                             let mat_index = matrix_index_for(
                                 &current_bounds,
                                 &V3c::from(position),
-                                self.brick_dim,
+                                self.chunk_dim,
                             );
                             let mat_index = flat_projection(
                                 mat_index.x as usize,
                                 mat_index.y as usize,
                                 mat_index.z as usize,
-                                self.brick_dim as usize,
+                                self.chunk_dim as usize,
                             );
                             if !VoxelContent::pix_points_to_empty(
-                                &brick[mat_index],
+                                &chunk[mat_index],
                                 &self.voxel_color_palette,
                                 &self.voxel_data_palette,
                             ) {
-                                return brick[mat_index];
+                                return chunk[mat_index];
                             }
                             return empty_marker();
                         }
-                        BrickData::Solid(voxel) => {
+                        ChunkData::Solid(voxel) => {
                             return *voxel;
                         }
                     }
                 }
-                VoxelContent::UniformLeaf(brick) => match brick {
-                    BrickData::Empty => {
+                VoxelContent::UniformLeaf(chunk) => match chunk {
+                    ChunkData::Empty => {
                         return empty_marker();
                     }
-                    BrickData::Parted(brick) => {
+                    ChunkData::Parted(chunk) => {
                         let mat_index =
-                            matrix_index_for(&current_bounds, &V3c::from(position), self.brick_dim);
+                            matrix_index_for(&current_bounds, &V3c::from(position), self.chunk_dim);
                         let mat_index = flat_projection(
                             mat_index.x as usize,
                             mat_index.y as usize,
                             mat_index.z as usize,
-                            self.brick_dim as usize,
+                            self.chunk_dim as usize,
                         );
-                        return brick[mat_index];
+                        return chunk[mat_index];
                     }
-                    BrickData::Solid(voxel) => {
+                    ChunkData::Solid(voxel) => {
                         return *voxel;
                     }
                 },

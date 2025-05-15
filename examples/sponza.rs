@@ -24,7 +24,7 @@ use image::{ImageBuffer, Rgb};
 const DISPLAY_RESOLUTION: [u32; 2] = [1920, 1080];
 
 #[cfg(feature = "bevy_wgpu")]
-const BRICK_DIMENSION: u32 = 32;
+const CHUNK_DIMENSION: u32 = 32;
 
 #[cfg(feature = "bevy_wgpu")]
 fn main() {
@@ -61,7 +61,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         println!("Loading sponza.vox");
         tree = match voxelhex::contree::Contree::load_vox_file(
             "assets/models/sponza.vox",
-            BRICK_DIMENSION,
+            CHUNK_DIMENSION,
         ) {
             Ok(tree_) => tree_,
             Err(message) => panic!("Parsing model file failed with message: {message}"),

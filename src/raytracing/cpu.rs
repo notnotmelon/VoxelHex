@@ -1,6 +1,6 @@
 use crate::{
     contree::{
-        types::{BrickData, VoxelChildren, VoxelContent, PaletteIndexValues},
+        types::{ChunkData, VoxelChildren, VoxelContent, PaletteIndexValues},
         Contree, ContreeEntry, V3c, VoxelData, BOX_NODE_DIMENSION, OOB_SECTANT,
     },
     spatial::{
@@ -151,53 +151,53 @@ impl<
         )
     }
 
-    /// Iterates on the given ray and brick to find a potential intersection in 3D space
-    /// Returns with the 3d and flat index values pointing to the voxel hit inside the brick in case there's a hit
-    fn traverse_brick(
+    /// Iterates on the given ray and chunk to find a potential intersection in 3D space
+    /// Returns with the 3d and flat index values pointing to the voxel hit inside the chunk in case there's a hit
+    fn traverse_chunk(
         &self,
         ray: &Ray,
         ray_current_point: &mut V3c<f32>,
-        brick: &[PaletteIndexValues],
-        brick_bounds: &Cube,
-        brick_dim: usize,
+        chunk: &[PaletteIndexValues],
+        chunk_bounds: &Cube,
+        chunk_dim: usize,
         ray_scale_factors: &V3c<f32>,
     ) -> Option<(V3c<usize>, usize)> {
-        // Decide the starting index inside the brick
-        let position_in_brick =
-            (*ray_current_point - brick_bounds.min_position) * brick_dim as f32 / brick_bounds.size;
+        // Decide the starting index inside the chunk
+        let position_in_chunk =
+            (*ray_current_point - chunk_bounds.min_position) * chunk_dim as f32 / chunk_bounds.size;
         let mut current_index = V3c::new(
-            (position_in_brick.x as i32).clamp(0, (brick_dim - 1) as i32),
-            (position_in_brick.y as i32).clamp(0, (brick_dim - 1) as i32),
-            (position_in_brick.z as i32).clamp(0, (brick_dim - 1) as i32),
+            (position_in_chunk.x as i32).clamp(0, (chunk_dim - 1) as i32),
+            (position_in_chunk.y as i32).clamp(0, (chunk_dim - 1) as i32),
+            (position_in_chunk.z as i32).clamp(0, (chunk_dim - 1) as i32),
         );
-        let flat_delta_x = flat_projection(1, 0, 0, brick_dim) as i32;
-        let flat_delta_y = flat_projection(0, 1, 0, brick_dim) as i32;
-        let flat_delta_z = flat_projection(0, 0, 1, brick_dim) as i32;
+        let flat_delta_x = flat_projection(1, 0, 0, chunk_dim) as i32;
+        let flat_delta_y = flat_projection(0, 1, 0, chunk_dim) as i32;
+        let flat_delta_z = flat_projection(0, 0, 1, chunk_dim) as i32;
         let mut current_flat_index = flat_projection(
             current_index.x as usize,
             current_index.y as usize,
             current_index.z as usize,
-            brick_dim,
+            chunk_dim,
         ) as i32;
 
         // Map the current position to index and bitmap spaces
-        let brick_unit = brick_bounds.size / brick_dim as f32; // how long is index step in space (set by the bounds)
+        let chunk_unit = chunk_bounds.size / chunk_dim as f32; // how long is index step in space (set by the bounds)
         let mut current_bounds = Cube {
-            min_position: brick_bounds.min_position + V3c::from(current_index) * brick_unit,
-            size: brick_unit,
+            min_position: chunk_bounds.min_position + V3c::from(current_index) * chunk_unit,
+            size: chunk_unit,
         };
 
-        // Loop through the brick, terminate if no possibility of hit
+        // Loop through the chunk, terminate if no possibility of hit
         let mut step = V3c::unit(0.);
         loop {
             if
             // If index is out of bounds, there's no hit
             current_index.x < 0
-                || current_index.x >= brick_dim as i32
+                || current_index.x >= chunk_dim as i32
                 || current_index.y < 0
-                || current_index.y >= brick_dim as i32
+                || current_index.y >= chunk_dim as i32
                 || current_index.z < 0
-                || current_index.z >= brick_dim as i32
+                || current_index.z >= chunk_dim as i32
             {
                 return None;
             }
@@ -210,13 +210,13 @@ impl<
                     current_index.x as usize,
                     current_index.y as usize,
                     current_index.z as usize,
-                    brick_dim,
+                    chunk_dim,
                 ),
                 current_flat_index as usize
             );
 
             if !VoxelContent::pix_points_to_empty(
-                &brick[current_flat_index as usize],
+                &chunk[current_flat_index as usize],
                 &self.voxel_color_palette,
                 &self.voxel_data_palette,
             ) {
@@ -232,7 +232,7 @@ impl<
                 &current_bounds,
                 ray_scale_factors,
             );
-            current_bounds.min_position += step * brick_unit;
+            current_bounds.min_position += step * chunk_unit;
             current_index += V3c::<i32>::from(step);
 
             #[cfg(debug_assertions)]
@@ -251,22 +251,22 @@ impl<
         }
     }
 
-    /// Intersects a brick with the given ray
-    /// * `returns` - The intersection with the brick, if any
-    fn probe_brick(
+    /// Intersects a chunk with the given ray
+    /// * `returns` - The intersection with the chunk, if any
+    fn probe_chunk(
         &self,
         ray: &Ray,
         ray_current_point: &mut V3c<f32>,
-        brick: &BrickData,
-        brick_bounds: &Cube,
+        chunk: &ChunkData,
+        chunk_bounds: &Cube,
         ray_scale_factors: &V3c<f32>,
     ) -> Option<(ContreeEntry<T>, V3c<f32>, V3c<f32>)> {
-        match brick {
-            BrickData::Empty => {
+        match chunk {
+            ChunkData::Empty => {
                 // No need to do anything, iteration continues with "leaf miss"
                 None
             }
-            BrickData::Solid(voxel) => {
+            ChunkData::Solid(voxel) => {
                 let impact_point = ray_current_point;
                 Some((
                     VoxelContent::pix_get_ref(
@@ -275,29 +275,29 @@ impl<
                         &self.voxel_data_palette,
                     ),
                     *impact_point,
-                    cube_impact_normal(brick_bounds, impact_point),
+                    cube_impact_normal(chunk_bounds, impact_point),
                 ))
             }
-            BrickData::Parted(brick) => {
-                if let Some((leaf_brick_hit, leaf_brick_hit_flat_index)) = self.traverse_brick(
+            ChunkData::Parted(chunk) => {
+                if let Some((leaf_chunk_hit, leaf_chunk_hit_flat_index)) = self.traverse_chunk(
                     ray,
                     ray_current_point,
-                    brick,
-                    brick_bounds,
-                    self.brick_dim as usize,
+                    chunk,
+                    chunk_bounds,
+                    self.chunk_dim as usize,
                     ray_scale_factors,
                 ) {
                     let hit_bounds = Cube {
-                        size: brick_bounds.size / self.brick_dim as f32,
-                        min_position: brick_bounds.min_position
-                            + V3c::<f32>::from(leaf_brick_hit) * brick_bounds.size
-                                / self.brick_dim as f32,
+                        size: chunk_bounds.size / self.chunk_dim as f32,
+                        min_position: chunk_bounds.min_position
+                            + V3c::<f32>::from(leaf_chunk_hit) * chunk_bounds.size
+                                / self.chunk_dim as f32,
                     };
                     let impact_point = ray_current_point;
                     let impact_normal = cube_impact_normal(&hit_bounds, impact_point);
                     Some((
                         VoxelContent::pix_get_ref(
-                            &brick[leaf_brick_hit_flat_index],
+                            &chunk[leaf_chunk_hit_flat_index],
                             &self.voxel_color_palette,
                             &self.voxel_data_palette,
                         ),
@@ -362,18 +362,18 @@ impl<
                     VoxelContent::UniformLeaf(_)
                 );
 
-                // Probe bricks in leaf nodes if target not out of bounds
+                // Probe chunks in leaf nodes if target not out of bounds
                 if target_sectant != OOB_SECTANT {
                     match self.nodes.get(current_node_key) {
-                        VoxelContent::UniformLeaf(brick) => {
+                        VoxelContent::UniformLeaf(chunk) => {
                             debug_assert!(matches!(
                                 self.node_children[current_node_key],
                                 VoxelChildren::OccupancyBitmap(_)
                             ));
-                            if let Some(hit) = self.probe_brick(
+                            if let Some(hit) = self.probe_chunk(
                                 ray,
                                 &mut ray_current_point,
-                                brick,
+                                chunk,
                                 &current_bounds,
                                 &ray_scale_factors,
                             ) {
@@ -381,15 +381,15 @@ impl<
                             }
                             do_backtrack_after_leaf_miss = true;
                         }
-                        VoxelContent::Leaf(bricks) => {
+                        VoxelContent::Leaf(chunks) => {
                             debug_assert!(matches!(
                                 self.node_children[current_node_key],
                                 VoxelChildren::OccupancyBitmap(_)
                             ));
-                            if let Some(hit) = self.probe_brick(
+                            if let Some(hit) = self.probe_chunk(
                                 ray,
                                 &mut ray_current_point,
-                                &bricks[target_sectant as usize],
+                                &chunks[target_sectant as usize],
                                 &current_bounds.child_bounds_for(target_sectant),
                                 &ray_scale_factors,
                             ) {

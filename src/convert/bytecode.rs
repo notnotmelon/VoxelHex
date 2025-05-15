@@ -1,7 +1,7 @@
 use crate::contree::types::PaletteIndexValues;
 use crate::contree::BOX_NODE_CHILDREN_COUNT;
 use crate::contree::{
-    types::{BrickData, VoxelChildren, VoxelContent},
+    types::{ChunkData, VoxelChildren, VoxelContent},
     Albedo, Contree,
 };
 use crate::object_pool::ObjectPool;
@@ -97,20 +97,20 @@ impl FromBencode for Albedo {
 //  ░███    ███  ░███    ░███     ░███     ░███    ░███
 //  ██████████   █████   █████    █████    █████   █████
 //####################################################################################
-impl ToBencode for BrickData {
+impl ToBencode for ChunkData {
     const MAX_DEPTH: usize = 3;
 
     fn encode(&self, encoder: SingleItemEncoder) -> Result<(), BencodeError> {
         match self {
-            BrickData::Empty => encoder.emit_str("#b"),
-            BrickData::Solid(voxel) => encoder.emit_list(|e| {
+            ChunkData::Empty => encoder.emit_str("#b"),
+            ChunkData::Solid(voxel) => encoder.emit_list(|e| {
                 e.emit_str("#b#")?;
                 e.emit(voxel)
             }),
-            BrickData::Parted(brick) => encoder.emit_list(|e| {
+            ChunkData::Parted(chunk) => encoder.emit_list(|e| {
                 e.emit_str("##b#")?;
-                e.emit_int(brick.len())?;
-                for voxel in brick.iter() {
+                e.emit_int(chunk.len())?;
+                for voxel in chunk.iter() {
                     e.emit(voxel)?;
                 }
                 e.emit_str("#")?;
@@ -120,7 +120,7 @@ impl ToBencode for BrickData {
     }
 }
 
-impl FromBencode for BrickData {
+impl FromBencode for ChunkData {
     fn decode_bencode_object(data: Object) -> Result<Self, bendy::decoding::Error> {
         match data {
             Object::Bytes(b) => {
@@ -130,7 +130,7 @@ impl FromBencode for BrickData {
                         .as_str(),
                     "#b"
                 );
-                Ok(BrickData::Empty)
+                Ok(ChunkData::Empty)
             }
             Object::List(mut list) => {
                 let is_solid = match list.next_object()?.unwrap() {
@@ -140,7 +140,7 @@ impl FromBencode for BrickData {
                             .as_str()
                         {
                             "#b#" => Ok(true),   // The content is a single voxel
-                            "##b#" => Ok(false), // The content is a brick of voxels
+                            "##b#" => Ok(false), // The content is a chunk of voxels
                             misc => Err(bendy::decoding::Error::unexpected_token(
                                 "A NodeContent Identifier string, which is either # or ##",
                                 "The string ".to_owned() + misc,
@@ -148,28 +148,28 @@ impl FromBencode for BrickData {
                         }
                     }
                     _ => Err(bendy::decoding::Error::unexpected_token(
-                        "BrickData string identifier",
+                        "ChunkData string identifier",
                         "Something else",
                     )),
                 }?;
                 if is_solid {
-                    Ok(BrickData::Solid(PaletteIndexValues::decode_bencode_object(
+                    Ok(ChunkData::Solid(PaletteIndexValues::decode_bencode_object(
                         list.next_object()?.unwrap(),
                     )?))
                 } else {
                     let len = match list.next_object()?.unwrap() {
                         Object::Integer(i) => Ok(i.parse()?),
                         _ => Err(bendy::decoding::Error::unexpected_token(
-                            "int field brick length",
+                            "int field chunk length",
                             "Something else",
                         )),
                     }?;
-                    debug_assert!(0 < len, "Expected brick to be of non-zero length!");
-                    let mut brick_data = Vec::with_capacity(len as usize);
+                    debug_assert!(0 < len, "Expected chunk to be of non-zero length!");
+                    let mut chunk_data = Vec::with_capacity(len as usize);
                     for _ in 0..len {
-                        brick_data.push(PaletteIndexValues::decode_bencode_object(list.next_object()?.unwrap())?);
+                        chunk_data.push(PaletteIndexValues::decode_bencode_object(list.next_object()?.unwrap())?);
                     }
-                    Ok(BrickData::Parted(brick_data))
+                    Ok(ChunkData::Parted(chunk_data))
                 }
             }
             _ => Err(bendy::decoding::Error::unexpected_token(
@@ -208,16 +208,16 @@ impl ToBencode for VoxelContent where {
                 e.emit_str("##")?;
                 e.emit_int(*occupied_bits)
             }),
-            VoxelContent::Leaf(bricks) => encoder.emit_list(|e| {
+            VoxelContent::Leaf(chunks) => encoder.emit_list(|e| {
                 e.emit_str("###")?;
-                for brick in bricks.iter().take(BOX_NODE_CHILDREN_COUNT) {
-                    e.emit(brick.clone())?;
+                for chunk in chunks.iter().take(BOX_NODE_CHILDREN_COUNT) {
+                    e.emit(chunk.clone())?;
                 }
                 Ok(())
             }),
-            VoxelContent::UniformLeaf(brick) => encoder.emit_list(|e| {
+            VoxelContent::UniformLeaf(chunk) => encoder.emit_list(|e| {
                 e.emit_str("##u#")?;
-                e.emit(brick.clone())
+                e.emit(chunk.clone())
             }),
         }
     }
@@ -272,15 +272,15 @@ impl FromBencode for VoxelContent {
                 }
 
                 if is_leaf && !is_uniform {
-                    let leaf_data: [BrickData; BOX_NODE_CHILDREN_COUNT] = (0
+                    let leaf_data: [ChunkData; BOX_NODE_CHILDREN_COUNT] = (0
                         ..BOX_NODE_CHILDREN_COUNT)
                         .map(|_sectant| {
-                            BrickData::decode_bencode_object(
+                            ChunkData::decode_bencode_object(
                                 list.next_object()
-                                    .expect("Expected BrickData object:")
+                                    .expect("Expected ChunkData object:")
                                     .unwrap(),
                             )
-                            .expect("Expected to decode BrickData:")
+                            .expect("Expected to decode ChunkData:")
                         })
                         .collect::<Vec<_>>()
                         .try_into()
@@ -290,7 +290,7 @@ impl FromBencode for VoxelContent {
                 }
 
                 if is_leaf && is_uniform {
-                    return Ok(VoxelContent::UniformLeaf(BrickData::decode_bencode_object(
+                    return Ok(VoxelContent::UniformLeaf(ChunkData::decode_bencode_object(
                         list.next_object()?.unwrap(),
                     )?));
                 }
@@ -413,7 +413,7 @@ where
         encoder.emit_list(|e| {
             e.emit_int(self.auto_simplify as u8)?;
             e.emit_int(self.contree_size)?;
-            e.emit_int(self.brick_dim)?;
+            e.emit_int(self.chunk_dim)?;
             e.emit(&self.nodes)?;
             e.emit(&self.node_children)?;
             e.emit(&self.voxel_color_palette)?;
@@ -451,7 +451,7 @@ where
                     )),
                 }?;
 
-                let brick_dim = match list.next_object()?.unwrap() {
+                let chunk_dim = match list.next_object()?.unwrap() {
                     Object::Integer(i) => Ok(i.parse()?),
                     _ => Err(bendy::decoding::Error::unexpected_token(
                         "int field contree_size",
@@ -479,7 +479,7 @@ where
                 Ok(Self {
                     auto_simplify,
                     contree_size: contree_size,
-                    brick_dim,
+                    chunk_dim,
                     nodes,
                     node_children,
                     voxel_color_palette,

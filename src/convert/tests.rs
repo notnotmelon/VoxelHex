@@ -1,31 +1,31 @@
 use crate::contree::{
-    types::{Albedo, BrickData, VoxelChildren, VoxelContent},
+    types::{Albedo, ChunkData, VoxelChildren, VoxelContent},
     Contree, ContreeEntry, V3c, BOX_NODE_CHILDREN_COUNT,
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
 
 #[test]
-fn test_node_brickdata_serialization() {
-    let brick_data_empty = BrickData::Empty;
-    let brick_data_solid = BrickData::Solid(3);
-    let brick_data_parted = BrickData::Parted(vec![4; 4 * 4 * 4]);
+fn test_node_chunkdata_serialization() {
+    let chunk_data_empty = ChunkData::Empty;
+    let chunk_data_solid = ChunkData::Solid(3);
+    let chunk_data_parted = ChunkData::Parted(vec![4; 4 * 4 * 4]);
 
-    let brick_data_empty_deserialized =
-        BrickData::from_bencode(&brick_data_empty.to_bencode().ok().unwrap())
+    let chunk_data_empty_deserialized =
+        ChunkData::from_bencode(&chunk_data_empty.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
-    let brick_data_solid_deserialized =
-        BrickData::from_bencode(&brick_data_solid.to_bencode().ok().unwrap())
+    let chunk_data_solid_deserialized =
+        ChunkData::from_bencode(&chunk_data_solid.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
-    let brick_data_parted_deserialized =
-        BrickData::from_bencode(&brick_data_parted.to_bencode().ok().unwrap())
+    let chunk_data_parted_deserialized =
+        ChunkData::from_bencode(&chunk_data_parted.to_bencode().ok().unwrap())
             .ok()
             .unwrap();
 
-    assert!(brick_data_empty_deserialized == brick_data_empty);
-    assert!(brick_data_solid_deserialized == brick_data_solid);
-    assert!(brick_data_parted_deserialized == brick_data_parted);
+    assert!(chunk_data_empty_deserialized == chunk_data_empty);
+    assert!(chunk_data_solid_deserialized == chunk_data_solid);
+    assert!(chunk_data_parted_deserialized == chunk_data_parted);
 }
 
 #[test]
@@ -35,16 +35,16 @@ fn test_nodecontent_serialization() {
     let node_content_leaf = VoxelContent::Leaf(
         (0..BOX_NODE_CHILDREN_COUNT)
             .map(|sectant| match sectant % 3 {
-                1 => BrickData::Solid(VoxelContent::pix_complex(69, 420)),
-                2 => BrickData::Parted(vec![VoxelContent::pix_visual(666)]),
-                _ => BrickData::Empty,
+                1 => ChunkData::Solid(VoxelContent::pix_complex(69, 420)),
+                2 => ChunkData::Parted(vec![VoxelContent::pix_visual(666)]),
+                _ => ChunkData::Empty,
             })
             .collect::<Vec<_>>()
             .try_into()
             .unwrap(),
     );
     let node_content_uniform_leaf = VoxelContent::UniformLeaf(
-        BrickData::Solid(VoxelContent::pix_informal(42)),
+        ChunkData::Solid(VoxelContent::pix_informal(42)),
     );
 
     let node_content_nothing_deserialized = VoxelContent::from_bencode(

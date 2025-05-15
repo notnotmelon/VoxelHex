@@ -56,13 +56,13 @@ pub(crate) fn hash_direction(direction: &V3c<f32>) -> u8 {
 }
 
 /// Provides the index value of a given sectant inside a 2x2x2 matrix ( which has octants )
-/// Types are not u8 only because this utility is mainly used to index inside bricks
+/// Types are not u8 only because this utility is mainly used to index inside chunks
 pub(crate) fn octant_in_sectants(sectant: usize) -> usize {
     let offset = SECTANT_OFFSET_LUT[sectant] * 2.;
     (offset.x >= 1.) as usize + (offset.z >= 1.) as usize * 2 + (offset.y >= 1.) as usize * 4
 }
 
-/// Provides an index value inside the brick contained in the given bounds
+/// Provides an index value inside the chunk contained in the given bounds
 /// Requires that position is larger, than the min_position of the bounds
 /// It takes into consideration the size of the bounds as well
 pub(crate) fn matrix_index_for(
@@ -93,7 +93,7 @@ pub(crate) fn matrix_index_for(
             .floor(),
     );
     // The difference between the actual position and min bounds
-    // must not be greater, than brick_dimension at each dimension
+    // must not be greater, than chunk_dimension at each dimension
     debug_assert!(mat_index.x < matrix_dimension as usize);
     debug_assert!(mat_index.y < matrix_dimension as usize);
     debug_assert!(mat_index.z < matrix_dimension as usize);
@@ -104,42 +104,42 @@ pub(crate) fn matrix_index_for(
 /// Updates occupancy data in parts of the given bitmap defined by the given position and size range
 /// * `position` - start coordinate of position to update
 /// * `size` - size to set inside the bitmap
-/// * `brick_size` - range of the given coordinate space
+/// * `chunk_size` - range of the given coordinate space
 /// * `occupied` - the value to set the bitmask at the given position
 /// * `bitmap` - The bitmap to update
 pub(crate) fn set_occupied_bitmap_value(
     position: &V3c<usize>,
     size: usize,
-    brick_dim: usize,
+    chunk_dim: usize,
     occupied: bool,
     bitmap: &mut u64,
 ) {
-    // In case the brick size is smaller than 4, one position sets multiple bits
-    debug_assert!(brick_dim >= 4 || (brick_dim == 2 || brick_dim == 1));
+    // In case the chunk size is smaller than 4, one position sets multiple bits
+    debug_assert!(chunk_dim >= 4 || (chunk_dim == 2 || chunk_dim == 1));
     debug_assert!(
-        position.x < brick_dim,
-        "Expected coordinate {:?} < brick size({brick_dim})",
+        position.x < chunk_dim,
+        "Expected coordinate {:?} < chunk size({chunk_dim})",
         position.x
     );
     debug_assert!(
-        position.y < brick_dim,
-        "Expected coordinate {:?} < brick size({brick_dim})",
+        position.y < chunk_dim,
+        "Expected coordinate {:?} < chunk size({chunk_dim})",
         position.y
     );
     debug_assert!(
-        position.z < brick_dim,
-        "Expected coordinate {:?} < brick size({brick_dim})",
+        position.z < chunk_dim,
+        "Expected coordinate {:?} < chunk size({chunk_dim})",
         position.z
     );
 
-    if brick_dim == 1 {
+    if chunk_dim == 1 {
         *bitmap = if occupied { u64::MAX } else { 0 };
         return;
     }
 
-    let update_count = (size as f32 * BOX_NODE_DIMENSION as f32 / brick_dim as f32).ceil() as usize;
+    let update_count = (size as f32 * BOX_NODE_DIMENSION as f32 / chunk_dim as f32).ceil() as usize;
     let update_start: V3c<usize> = (V3c::<f32>::from(*position * BOX_NODE_DIMENSION)
-        / brick_dim as f32)
+        / chunk_dim as f32)
         .floor()
         .into();
     for x in update_start.x..(update_start.x + update_count).min(BOX_NODE_DIMENSION) {

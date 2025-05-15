@@ -1,6 +1,6 @@
 use crate::{
     contree::{
-        types::{BrickData, VoxelContent, PaletteIndexValues},
+        types::{ChunkData, VoxelContent, PaletteIndexValues},
         Contree, V3c, VoxelData, BOX_NODE_CHILDREN_COUNT,
     },
     object_pool::empty_marker,
@@ -8,7 +8,7 @@ use crate::{
         create_depth_texture, create_output_texture,
         types::{
             ContreeGPUDataHandler, ContreeGPUHost, BoxTreeGPUView, ContreeMetaData,
-            ContreeRenderData, BoxTreeSpyGlass, BrickUpdate, VhxRenderPipeline, VhxViewSet,
+            ContreeRenderData, BoxTreeSpyGlass, ChunkUpdate, VhxRenderPipeline, VhxViewSet,
             VictimPointer, Viewport,
         },
     },
@@ -50,7 +50,7 @@ fn contree_properties<
 >(
     tree: &Contree<T>,
 ) -> u32 {
-    tree.brick_dim & 0x0000FFFF
+    tree.chunk_dim & 0x0000FFFF
 }
 
 impl<
@@ -134,9 +134,9 @@ impl<
                 color_palette: vec![Vec4::ZERO; u16::MAX as usize],
             },
             victim_node: VictimPointer::new(nodes_in_view),
-            victim_brick: 0,
+            victim_chunk: 0,
             node_key_vs_meta_index: BiHashMap::new(),
-            brick_ownership: BiHashMap::new(),
+            chunk_ownership: BiHashMap::new(),
             uploaded_color_palette_size: 0,
         };
         let output_texture = create_output_texture(resolution, &mut images);
@@ -338,24 +338,24 @@ fn write_range_to_buffer<U>(
     }
 }
 
-/// Extend the given HashMap with a list of brick updates, except avoid overwriting available data with None value
-fn extend_brick_updates<'a>(
-    brick_updates: &mut HashMap<usize, Option<&'a [PaletteIndexValues]>>,
-    addition: Vec<BrickUpdate<'a>>,
+/// Extend the given HashMap with a list of chunk updates, except avoid overwriting available data with None value
+fn extend_chunk_updates<'a>(
+    chunk_updates: &mut HashMap<usize, Option<&'a [PaletteIndexValues]>>,
+    addition: Vec<ChunkUpdate<'a>>,
 ) {
-    for brick_update in addition {
-        brick_updates
-            .entry(brick_update.brick_index)
-            .and_modify(|current_brick_data| {
-                match (*current_brick_data, brick_update.data) {
-                    (None, None) | (Some(_), None) => {} // Keep the current brick data if there is already something
+    for chunk_update in addition {
+        chunk_updates
+            .entry(chunk_update.chunk_index)
+            .and_modify(|current_chunk_data| {
+                match (*current_chunk_data, chunk_update.data) {
+                    (None, None) | (Some(_), None) => {} // Keep the current chunk data if there is already something
                     (Some(_), Some(_)) | (None, Some(_)) => {
-                        // Overwrite the current brick request
-                        *current_brick_data = brick_update.data
+                        // Overwrite the current chunk request
+                        *current_chunk_data = chunk_update.data
                     }
                 }
             })
-            .or_insert(brick_update.data);
+            .or_insert(chunk_update.data);
     }
 }
 
@@ -474,7 +474,7 @@ pub(crate) fn write_to_gpu<
         };
         let mut node_requests = view.spyglass.node_requests.clone();
         let mut modified_nodes = HashSet::<usize>::new();
-        let mut modified_bricks = HashMap::<usize, Option<&[PaletteIndexValues]>>::new();
+        let mut modified_chunks = HashMap::<usize, Option<&[PaletteIndexValues]>>::new();
         let victim_node_loop_count = view.data_handler.victim_node.get_loop_count();
         for node_request in &mut node_requests {
             if *node_request == empty_marker::<u32>() {
@@ -543,7 +543,7 @@ pub(crate) fn write_to_gpu<
                             .end
                             .max(cache_update.modified_usage_range.end);
                         modified_nodes.extend(cache_update.modified_nodes);
-                        extend_brick_updates(&mut modified_bricks, cache_update.brick_updates);
+                        extend_chunk_updates(&mut modified_chunks, cache_update.chunk_updates);
 
                         child_index
                     } else {
@@ -568,15 +568,15 @@ pub(crate) fn write_to_gpu<
                     ocbits_updated.start = ocbits_updated.start.min(child_index * 2);
                     ocbits_updated.end = ocbits_updated.end.max(child_index * 2 + 2);
                 }
-                VoxelContent::UniformLeaf(brick) => {
-                    // Only upload brick if it's a parted, not already available brick
-                    if matches!(brick, BrickData::Parted(_))
+                VoxelContent::UniformLeaf(chunk) => {
+                    // Only upload chunk if it's a parted, not already available chunk
+                    if matches!(chunk, ChunkData::Parted(_))
                         && view.data_handler.render_data.node_children[requester_first_child_index]
                             == empty_marker::<u32>()
                     {
                         let (child_descriptor, cache_update) =
                             view.data_handler
-                                .add_brick(tree, requested_parent_node_key, 0);
+                                .add_chunk(tree, requested_parent_node_key, 0);
 
                         view.data_handler.render_data.node_children[requester_first_child_index] =
                             child_descriptor as u32;
@@ -588,18 +588,18 @@ pub(crate) fn write_to_gpu<
                             .end
                             .max(cache_update.modified_usage_range.end);
                         modified_nodes.extend(cache_update.modified_nodes);
-                        extend_brick_updates(&mut modified_bricks, cache_update.brick_updates);
+                        extend_chunk_updates(&mut modified_chunks, cache_update.chunk_updates);
                     }
                 }
-                VoxelContent::Leaf(bricks) => {
-                    // Only upload brick if it's a parted, not already available brick
+                VoxelContent::Leaf(chunks) => {
+                    // Only upload chunk if it's a parted, not already available chunk
                     if matches!(
-                        bricks[requested_child_sectant as usize],
-                        BrickData::Parted(_)
+                        chunks[requested_child_sectant as usize],
+                        ChunkData::Parted(_)
                     ) && view.data_handler.render_data.node_children[requester_child_offset]
                         == empty_marker::<u32>()
                     {
-                        let (child_descriptor, cache_update) = view.data_handler.add_brick(
+                        let (child_descriptor, cache_update) = view.data_handler.add_chunk(
                             tree,
                             requested_parent_node_key,
                             requested_child_sectant,
@@ -615,7 +615,7 @@ pub(crate) fn write_to_gpu<
                             .end
                             .max(cache_update.modified_usage_range.end);
                         modified_nodes.extend(cache_update.modified_nodes);
-                        extend_brick_updates(&mut modified_bricks, cache_update.brick_updates);
+                        extend_chunk_updates(&mut modified_chunks, cache_update.chunk_updates);
                     }
                 }
             }
@@ -644,7 +644,7 @@ pub(crate) fn write_to_gpu<
             *node_request = empty_marker();
         }
 
-        // Set updated buffers range based on modified nodes and bricks
+        // Set updated buffers range based on modified nodes and chunks
         for modified_node_index in &modified_nodes {
             node_meta_updated.start = node_meta_updated.start.min(*modified_node_index / 8);
             node_meta_updated.end = node_meta_updated.end.max(modified_node_index / 8 + 1);
@@ -713,19 +713,19 @@ pub(crate) fn write_to_gpu<
         );
 
         // Upload Voxel data
-        for modified_brick_data in &modified_bricks {
-            if let Some(new_brick_data) = modified_brick_data.1 {
-                let brick_start_index = *modified_brick_data.0 * new_brick_data.len();
+        for modified_chunk_data in &modified_chunks {
+            if let Some(new_chunk_data) = modified_chunk_data.1 {
+                let chunk_start_index = *modified_chunk_data.0 * new_chunk_data.len();
                 debug_assert_eq!(
-                    new_brick_data.len(),
-                    tree.brick_dim.pow(3) as usize,
-                    "Expected Brick slice to align to tree brick dimension"
+                    new_chunk_data.len(),
+                    tree.chunk_dim.pow(3) as usize,
+                    "Expected Chunk slice to align to tree chunk dimension"
                 );
                 unsafe {
                     render_queue.write_buffer(
                         &resources.voxels_buffer,
-                        (brick_start_index * std::mem::size_of_val(&new_brick_data[0])) as u64,
-                        new_brick_data.align_to::<u8>().1,
+                        (chunk_start_index * std::mem::size_of_val(&new_chunk_data[0])) as u64,
+                        new_chunk_data.align_to::<u8>().1,
                     );
                 }
             }
