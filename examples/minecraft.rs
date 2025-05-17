@@ -40,12 +40,12 @@ fn main() {
 
 #[cfg(feature = "bevy_wgpu")]
 fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
-    use voxelhex::{contree::types::Contree, raytracing::{bevy::types::RaymarchingViewSet, Viewport}, spatial::math::vector::V3c};
+    use voxelhex::{raytracing::{bevy::types::RaymarchingViewSet, Viewport}, spatial::math::vector::V3c};
 
     std::env::set_var("RUST_BACKTRACE", "1");
-    let tree: Contree;
+    /*let tree: Contree;
     let tree_path = "example_junk_minecraft";
-    /*if std::path::Path::new(tree_path).exists() {
+    if std::path::Path::new(tree_path).exists() {
         tree = Contree::load(&tree_path).ok().unwrap();
     } else {
         println!("Loading minecraft.vox");
@@ -57,11 +57,7 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         tree.save(&tree_path).ok().unwrap();
     }*/
 
-    /*let mut host = ContreeGPUHost { tree };
-    let mut views = RaymarchingViewSet::default();
-    let view_index = host.create_new_view(
-        &mut views,
-        10,
+    let view = RaymarchingViewSet::new(
         Viewport::new(
             V3c {
                 x: 0.,
@@ -80,12 +76,16 @@ fn setup(mut commands: Commands, images: ResMut<Assets<Image>>) {
         images,
     );
 
-    commands.insert_resource(host);*/
-
-    let mut display = Sprite::sized(Vec2 { x: DISPLAY_RESOLUTION[0] as f32, y: DISPLAY_RESOLUTION[1] as f32 });
+    let mut display = Sprite::from_image(
+        view.view
+            .lock()
+            .unwrap()
+            .output_texture()
+            .clone(),
+    );
+    commands.insert_resource(view);
     display.custom_size = Some(Vec2::new(1024., 768.));
     commands.spawn(display);
-    //commands.insert_resource(views);
     commands.spawn((
         Camera {
             is_active: false,

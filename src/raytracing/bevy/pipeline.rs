@@ -4,23 +4,14 @@ use crate::
         RaymarchingRenderNode, RaymarchingRenderPipeline,
     }
 ;
-use bevy::{
-    asset::AssetServer,
-    ecs::world::{FromWorld, World},
-    render::{
-        render_graph::{self},
-        render_resource::{
-            BindGroupLayoutEntry, BindingType, Buffer,
-            BufferBindingType, CachedPipelineState, ComputePassDescriptor, ComputePipelineDescriptor, PipelineCache,
-            ShaderSize, ShaderStages, ShaderType, StorageTextureAccess, TextureFormat,
-            TextureViewDimension,
-        },
-        renderer::{RenderContext, RenderDevice, RenderQueue},
-    },
-};
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_graph, render_resource::*, renderer::*, texture::GpuImage}};
+use bevy::render::render_resource::encase::StorageBuffer;
 use std::{borrow::Cow, ops::Range};
 
-use super::types::RaymarchingViewSet;
+use super::types::{BoxTreeGPUView, ContreeRenderDataResources, RaymarchingViewSet};
+
+const RENDER_STAGE_DEPTH_PREPASS: u32 = 0;
+const RENDER_STAGE_MAIN: u32 = 1;
 
 impl FromWorld for RaymarchingRenderPipeline {
     //##############################################################################
@@ -205,10 +196,96 @@ impl render_graph::Node for RaymarchingRenderNode {
 //   ░░░░░░░░░  ░░░░░   ░░░░░    ░░░░░░░      ░░░░░░░░   ░░░░░         ░░░░░░░░░
 //##############################################################################
 ///
-fn create_bind_groups(
-    
-) {
+fn create_stage_bind_groups(
+    gpu_images: &Res<RenderAssets<GpuImage>>,
+    pipeline: &mut RaymarchingRenderPipeline,
+    render_device: &Res<RenderDevice>,
+    tree_view: &BoxTreeGPUView,
+) -> (BindGroup, BindGroup) {
+    let mut buffer = StorageBuffer::new(Vec::<u8>::new());
+    buffer
+        .write(&RenderStageData {
+            stage: RENDER_STAGE_DEPTH_PREPASS,
+            output_resolution: UVec2::new(tree_view.resolution[0] / 2, tree_view.resolution[1] / 2),
+        })
+        .unwrap();
+    let prepass_data_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+        label: Some("Vhx Prepass stage Buffer"),
+        contents: &buffer.into_inner(),
+        usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+    });
 
+    let mut buffer = StorageBuffer::new(Vec::<u8>::new());
+    buffer
+        .write(&RenderStageData {
+            stage: RENDER_STAGE_MAIN,
+            output_resolution: UVec2::new(tree_view.resolution[0], tree_view.resolution[1]),
+        })
+        .unwrap();
+    let render_stage_data_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+        label: Some("Vhx Main Render stage Buffer"),
+        contents: &buffer.into_inner(),
+        usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+    });
+
+    (
+        render_device.create_bind_group(
+            "Prepass stage bind group",
+            &pipeline.render_stage_bind_group_layout,
+            &[
+                bevy::render::render_resource::BindGroupEntry {
+                    binding: 0,
+                    resource: prepass_data_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::TextureView(
+                        &gpu_images
+                            .get(&tree_view.spyglass.output_texture)
+                            .unwrap()
+                            .texture_view,
+                    ),
+                },
+                BindGroupEntry {
+                    binding: 2,
+                    resource: BindingResource::TextureView(
+                        &gpu_images
+                            .get(&tree_view.spyglass.depth_texture)
+                            .unwrap()
+                            .texture_view,
+                    ),
+                },
+            ],
+        ),
+        render_device.create_bind_group(
+            "Main Render stage main bind group",
+            &pipeline.render_stage_bind_group_layout,
+            &[
+                bevy::render::render_resource::BindGroupEntry {
+                    binding: 0,
+                    resource: render_stage_data_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::TextureView(
+                        &gpu_images
+                            .get(&tree_view.spyglass.output_texture)
+                            .unwrap()
+                            .texture_view,
+                    ),
+                },
+                BindGroupEntry {
+                    binding: 2,
+                    resource: BindingResource::TextureView(
+                        &gpu_images
+                            .get(&tree_view.spyglass.depth_texture)
+                            .unwrap()
+                            .texture_view,
+                    ),
+                },
+            ],
+        ),
+    )
 }
 
 //##############################################################################
@@ -237,11 +314,96 @@ fn create_bind_groups(
 //  ░░█████████  █████   █████ ░░░███████░   ░░████████   █████       ░░█████████
 //   ░░░░░░░░░  ░░░░░   ░░░░░    ░░░░░░░      ░░░░░░░░   ░░░░░         ░░░░░░░░░
 //##############################################################################
-/// Constructs buffers, bing groups and uploads rendering data at initialization and whenever prompted
+/// Constructs buffers, bind groups and uploads rendering data at initialization and whenever prompted
 pub(crate) fn prepare_bind_groups(
-
+    gpu_images: Res<RenderAssets<GpuImage>>,
+    render_device: Res<RenderDevice>,
+    mut pipeline: ResMut<RaymarchingRenderPipeline>,
+    mut view_set: ResMut<RaymarchingViewSet>,
 ) {
 
+    // Rebuild view for texture updates
+    let can_rebuild = {
+        let view = view_set.view.lock().unwrap();
+        view.rebuild
+            && view.new_output_texture.is_some()
+            && gpu_images
+                .get(view.new_output_texture.as_ref().unwrap())
+                .is_some()
+            && view.spyglass.output_texture == *view.new_output_texture.as_ref().unwrap()
+            && view.new_depth_texture.is_some()
+            && gpu_images
+                .get(view.new_depth_texture.as_ref().unwrap())
+                .is_some()
+            && view.spyglass.depth_texture == *view.new_depth_texture.as_ref().unwrap()
+    };
+
+    if can_rebuild {
+        let (render_stage_prepass_bind_group, render_stage_main_bind_group) =
+            create_stage_bind_groups(
+                &gpu_images,
+                &mut pipeline,
+                &render_device,
+                &view_set.view.lock().unwrap(),
+            );
+
+        let view_resources = view_set.resources.as_mut().unwrap();
+        view_resources.render_stage_prepass_bind_group = render_stage_prepass_bind_group;
+        view_resources.render_stage_main_bind_group = render_stage_main_bind_group;
+
+        // Update view to clear temporary objects
+        let mut view = view_set.view.lock().unwrap();
+        view.new_output_texture = None;
+        view.new_depth_texture = None;
+        view.rebuild = false;
+        return;
+    }
+
+    if let Some(_) = &view_set.resources {
+        return;
+    }
+
+    let view_resources = create_view_resources(
+        &mut pipeline,
+        render_device,
+        gpu_images,
+        &view_set.view.lock().unwrap(),
+    );
+    view_set.resources = Some(view_resources);
+}
+
+//##############################################################################
+//    █████████  ███████████   ██████████   █████████   ███████████ ██████████
+//   ███░░░░░███░░███░░░░░███ ░░███░░░░░█  ███░░░░░███ ░█░░░███░░░█░░███░░░░░█
+//  ███     ░░░  ░███    ░███  ░███  █ ░  ░███    ░███ ░   ░███  ░  ░███  █ ░
+// ░███          ░██████████   ░██████    ░███████████     ░███     ░██████
+// ░███          ░███░░░░░███  ░███░░█    ░███░░░░░███     ░███     ░███░░█
+// ░░███     ███ ░███    ░███  ░███ ░   █ ░███    ░███     ░███     ░███ ░   █
+//  ░░█████████  █████   █████ ██████████ █████   █████    █████    ██████████
+//   ░░░░░░░░░  ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░   ░░░░░    ░░░░░    ░░░░░░░░░░
+//  █████   █████ █████ ██████████ █████   ███   █████    ███████████   ██████████  █████████
+// ░░███   ░░███ ░░███ ░░███░░░░░█░░███   ░███  ░░███    ░░███░░░░░███ ░░███░░░░░█ ███░░░░░███
+//  ░███    ░███  ░███  ░███  █ ░  ░███   ░███   ░███     ░███    ░███  ░███  █ ░ ░███    ░░░
+//  ░███    ░███  ░███  ░██████    ░███   ░███   ░███     ░██████████   ░██████   ░░█████████
+//  ░░███   ███   ░███  ░███░░█    ░░███  █████  ███      ░███░░░░░███  ░███░░█    ░░░░░░░░███
+//   ░░░█████░    ░███  ░███ ░   █  ░░░█████░█████░       ░███    ░███  ░███ ░   █ ███    ░███
+//     ░░███      █████ ██████████    ░░███ ░░███         █████   █████ ██████████░░█████████
+//      ░░░      ░░░░░ ░░░░░░░░░░      ░░░   ░░░         ░░░░░   ░░░░░ ░░░░░░░░░░  ░░░░░░░░░
+//##############################################################################
+/// Creates the resource collector for the given view
+fn create_view_resources(
+    pipeline: &mut RaymarchingRenderPipeline,
+    render_device: Res<RenderDevice>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
+    tree_view: &BoxTreeGPUView,
+) -> ContreeRenderDataResources {
+    let (render_stage_prepass_bind_group, render_stage_main_bind_group) =
+        create_stage_bind_groups(&gpu_images, pipeline, &render_device, tree_view);
+
+    ContreeRenderDataResources {
+        render_stage_prepass_bind_group,
+        render_stage_main_bind_group,
+    }
 }
 
 //##############################################################################

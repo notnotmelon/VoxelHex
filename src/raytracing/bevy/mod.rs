@@ -10,7 +10,6 @@ use crate::{
         types::{RaymarchingLabel, RaymarchingRenderNode, RaymarchingRenderPipeline},
     }, spatial::math::vector::V3cf32
 };
-use bendy::{decoding::FromBencode, encoding::ToBencode};
 use bevy::{
     app::{App, Plugin},
     prelude::{
@@ -18,12 +17,11 @@ use bevy::{
         Update, Vec4,
     },
     render::{
-        extract_component::ExtractComponentPlugin, render_asset::RenderAssetUsages, render_graph::RenderGraph, render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages}, Render, RenderApp, RenderSet
+        extract_component::ExtractComponentPlugin, extract_resource::ExtractResourcePlugin, render_asset::RenderAssetUsages, render_graph::RenderGraph, render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages}, Render, RenderApp, RenderSet
     },
 };
 use pipeline::write_to_gpu;
-use types::RaymarchingViewSet;
-use std::hash::Hash;
+use types::{BoxTreeGPUView, RaymarchingViewSet};
 
 impl From<Vec4> for Albedo {
     fn from(vec: Vec4) -> Self {
@@ -43,6 +41,42 @@ impl From<Albedo> for Vec4 {
             color.b as f32 / 255.,
             color.a as f32 / 255.,
         )
+    }
+}
+
+impl BoxTreeGPUView {
+    /// Erases the whole view to be uploaded to the GPU again
+    pub fn reload(&mut self) {
+        self.reload = true;
+    }
+
+    /// Provides the handle to the output texture
+    /// Warning! Handle will no longer being updated after resolution change
+    pub fn output_texture(&self) -> &Handle<Image> {
+        &self.spyglass.output_texture
+    }
+
+    /// Updates the resolution on which the view operates on.
+    /// It will make a new output texture if size is larger, than the current output texture
+    pub fn set_resolution(
+        &mut self,
+        resolution: [u32; 2],
+        images: &mut ResMut<Assets<Image>>,
+    ) -> Handle<Image> {
+        if self.resolution != resolution {
+            self.new_resolution = Some(resolution);
+            self.new_output_texture = Some(create_output_texture(resolution, images));
+            self.new_depth_texture = Some(create_depth_texture(resolution, images));
+            self.rebuild = true;
+            self.new_output_texture.as_ref().unwrap().clone_weak()
+        } else {
+            self.spyglass.output_texture.clone_weak()
+        }
+    }
+
+    /// Provides currently used resolution for the view
+    pub fn resolution(&self) -> [u32; 2] {
+        self.resolution
     }
 }
 
@@ -132,12 +166,10 @@ impl Plugin for RenderBevyPlugin
     fn build(&self, app: &mut App) {
         app.add_plugins((
             ExtractComponentPlugin::<BakedContree>::default(),
+            ExtractResourcePlugin::<RaymarchingViewSet>::default()
         ));
         app.add_systems(Update, handle_resolution_updates);
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.insert_resource(RaymarchingViewSet {
-            resources: None
-        });
         render_app.add_systems(
             Render,
             (

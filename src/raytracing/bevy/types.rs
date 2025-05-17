@@ -1,13 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use crate::spatial::math::vector::V3cf32;
-use bevy::{
-    asset::Handle, ecs::system::Resource, math::UVec2, prelude::Image, render::{
-        extract_resource::ExtractResource, render_graph::RenderLabel, render_resource::{
-            BindGroup, BindGroupLayout, CachedComputePipelineId, ShaderType
-        }, renderer::RenderQueue
-    }
-};
+use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_graph::RenderLabel, render_resource::*, renderer::RenderQueue}};
+
+use super::{create_depth_texture, create_output_texture};
 
 #[derive(Debug, Clone, Copy, ShaderType)]
 pub struct Viewport {
@@ -41,22 +37,7 @@ pub struct BoxTreeSpyGlass {
 
     // The viewport containing display information
     pub(crate) viewport: Viewport,
-
-    // The nodes requested by the raytracing algorithm to be displayed
-    pub(crate) node_requests: Vec<u32>,
 }
-
-#[derive(Debug, Clone)]
-pub(crate) struct VictimPointer {
-    pub(crate) max_meta_len: usize,
-    pub(crate) loop_count: usize,
-    pub(crate) stored_items: usize,
-    pub(crate) meta_index: usize,
-    pub(crate) child: usize,
-}
-
-pub(crate) const VHX_PREPASS_STAGE_ID: u32 = 01;
-pub(crate) const VHX_RENDER_STAGE_ID: u32 = 02;
 
 #[derive(Debug, Clone, Copy, ShaderType)]
 pub(crate) struct RenderStageData {
@@ -108,10 +89,40 @@ pub struct BoxTreeGPUView {
     pub(crate) new_output_texture: Option<Handle<Image>>,
 }
 
-#[derive(Default, Resource, Clone, ExtractResource)]
+#[derive(Resource, Clone, ExtractResource)]
 pub struct RaymarchingViewSet {
-    //pub views: Arc<Mutex<BoxTreeGPUView>>,
+    pub view: Arc<Mutex<BoxTreeGPUView>>,
     pub(crate) resources: Option<ContreeRenderDataResources>,
+}
+
+impl RaymarchingViewSet {
+    pub fn new(
+        viewport: Viewport,
+        resolution: [u32; 2],
+        mut images: ResMut<Assets<Image>>
+    ) -> Self {
+        let output_texture = create_output_texture(resolution, &mut images);
+        let view = BoxTreeGPUView {
+            resolution,
+            reload: false,
+            rebuild: false,
+            init_data_sent: false,
+            data_ready: false,
+            new_resolution: None,
+            new_output_texture: None,
+            new_depth_texture: None,
+            spyglass: BoxTreeSpyGlass {
+                depth_texture: create_depth_texture(resolution, &mut images),
+                output_texture,
+                viewport_changed: true,
+                viewport,
+            },
+        };
+        Self {
+            view: Arc::new(Mutex::new(view)),
+            resources: None
+        }
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
