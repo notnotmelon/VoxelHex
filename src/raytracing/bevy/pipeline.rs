@@ -137,8 +137,8 @@ impl render_graph::Node for RaymarchingRenderNode {
         let pipeline = world.resource::<RaymarchingRenderPipeline>();
         let vhx_view_set = world.resource::<RaymarchingViewSet>();
         //let current_view = vhx_view_set.views[0].lock().unwrap();
-        let resolution = [1024, 768];
-
+        let resolution = vhx_view_set.view.lock().unwrap().resolution;
+        
         if let Some(resources) = &vhx_view_set.resources {
             let pipeline_cache = world.resource::<PipelineCache>();
             let command_encoder = render_context.command_encoder();
