@@ -1,5 +1,4 @@
-use crate::{contree::BOX_NODE_CHILDREN_COUNT, object_pool::ObjectPool};
-use std::{collections::HashMap, error::Error, hash::Hash};
+use std::{error::Error, hash::Hash, u64};
 
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
@@ -7,78 +6,11 @@ use serde::{Deserialize, Serialize};
 /// error types during usage or creation of the contree
 #[derive(Debug)]
 pub enum ContreeError {
-    /// Octree creation was attempted with an invalid contree size
-    InvalidSize(u32),
-
-    /// Octree creation was attempted with an invalid brick dimension
-    InvalidBrickDimension(u32),
-
     /// Octree creation was attempted with an invalid structure parameter ( refer to error )
     InvalidStructure(Box<dyn Error>),
 
     /// Octree query was attempted with an invalid position
     InvalidPosition { x: u32, y: u32, z: u32 },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ContreeEntry<'a, T: VoxelData> {
-    /// No information available in contree query
-    Empty,
-
-    /// Albedo data is available in contree query
-    Visual(&'a Albedo),
-
-    /// User data is avaliable in contree query
-    Informative(&'a T),
-
-    /// Both user data and color information is available in contree query
-    Complex(&'a Albedo, &'a T),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum BrickData {
-    /// Brick is empty
-    Empty,
-
-    /// Brick is an NxNxN matrix, size is determined by the parent entity
-    Parted(Vec<PaletteIndexValues>),
-
-    /// Brick is a single item T, which takes up the entirety of the brick
-    Solid(PaletteIndexValues),
-}
-
-#[derive(Debug, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum VoxelContent
-{
-    /// Node is empty
-    #[default]
-    Nothing,
-
-    /// Internal node + cache data to store the occupancy of the enclosed nodes
-    Internal(u64),
-
-    /// Node contains 64 children, each with their own brickdata
-    Leaf([BrickData; BOX_NODE_CHILDREN_COUNT]),
-
-    /// Node has one child, which takes up the entirety of the node with its brick data
-    UniformLeaf(BrickData),
-}
-
-#[derive(Default, Copy, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub(crate) enum VoxelChildren {
-    #[default]
-    NoChildren,
-    Children([u32; BOX_NODE_CHILDREN_COUNT]),
-    OccupancyBitmap(u64), // In case of leaf nodes
-}
-
-/// Trait for User Defined Voxel Data
-pub trait VoxelData {
-    /// Determines if the voxel is to be hit by rays in the raytracing algorithms
-    fn is_empty(&self) -> bool;
 }
 
 /// Color properties of a voxel
@@ -91,44 +23,131 @@ pub struct Albedo {
     pub a: u8,
 }
 
-pub(crate) type PaletteIndexValues = u32;
+pub(crate) type VoxelData = u32;
+pub const AIR: VoxelData = 0;
 
-/// Sparse 64Tree of Voxel Bricks, where each leaf node contains a brick of voxels.
-/// A Brick is a 3 dimensional matrix, each element of it containing a voxel.
-/// A Brick can be indexed directly, as opposed to the contree which is essentially a
-/// tree-graph where each node has 64 children.
-#[cfg_attr(feature = "serialization", derive(Serialize))]
-#[derive(Clone)]
-pub struct Contree<T = u32>
-where
-    T: Default + Clone + Eq + Hash,
-{
-    /// Size of one brick in a leaf node (dim^3)
-    pub(crate) brick_dim: u32,
+/// Sparse 64Tree of Voxels. Branches indefinitely until reaching a homogenous Contree or air.
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq)]
+pub enum Contree {
+    Leaf(VoxelData),
+    Node(ContreeNode)
+}
 
-    /// Extent of the contree
-    pub(crate) contree_size: u32,
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+pub struct ContreeNode {
+    pub(crate) mip: Albedo,
+    pub(crate) occupancy: u64,
+    pub(crate) children: Box<[Option<Contree>; 64]>,
+}
 
-    /// Storing data at each position through palette index values
-    pub(crate) nodes: ObjectPool<VoxelContent>,
+impl Contree {
+    /// Subdivides the leaf into multiple identicial nodes. Does nothing if this is not a leaf.
+    #[inline]
+    fn subdivide(&mut self) {
+        let children: [Option<Contree>; 64] = match self {
+            Contree::Leaf(_) => {
+                let mut children = [
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                    None, None, None, None, None, None, None, None,
+                ];
+                for i in 0..64 {
+                    children[i] = Some(self.clone());
+                }
+                children
+            }
+            Contree::Node(_) => return,
+        };
 
-    /// Node Connections
-    pub(crate) node_children: Vec<VoxelChildren>,
+        *self = Contree::Node(ContreeNode{
+            mip: Albedo { r: 0, g: 0, b: 0, a: 0 },
+            occupancy: u64::MAX,
+            children: Box::from(children),
+        });
+    }
 
-    /// The albedo colors used by the contree. Maximum 65535 colors can be used at once
-    /// because of a limitation on GPU raytracing, to spare space index values refering the palettes
-    /// are stored on 2 Bytes
-    pub(crate) voxel_color_palette: Vec<Albedo>, // referenced by @nodes
-    pub(crate) voxel_data_palette: Vec<T>, // referenced by @nodes
+    /// Recursively optimizes compaction of children nodes.
+    #[inline]
+    fn recursive_simplify(&mut self) {
+        todo!();
+    }
 
-    /// Cache variable to help find colors inside the color palette
-    #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]
-    pub(crate) map_to_color_index_in_palette: HashMap<Albedo, usize>,
+    #[inline]
+    fn recalculate_occupancy_bits(&mut self) {
+        let mut occupancy = 0;
+        let mut homogeneous_material = Some(0);
+        match self {
+            Contree::Node(node) => {
+                let mut bit = 1;
+                for node in node.children.iter() {
+                    match node {
+                        Some(Contree::Leaf(node)) => {
+                            let node = *node;
+                            if node == AIR {
+                                homogeneous_material = None;
+                                bit *= 2;
+                                continue;
+                            } else if homogeneous_material == Some(0) {
+                                homogeneous_material = Some(node);
+                            } else if homogeneous_material != Some(node) {
+                                homogeneous_material = None;
+                            }
+                            occupancy &= bit;
+                        },
+                        Some(Contree::Node(_)) => {
+                            occupancy &= bit;
+                            homogeneous_material = None;
+                        },
+                        None => {
+                            homogeneous_material = None;
+                        }
+                    }
+                    bit *= 2;
+                }
+                node.occupancy = occupancy;
+            },
+            Contree::Leaf(_) => return,
+        }
 
-    /// Cache variable to help find user data in the palette
-    #[cfg_attr(feature = "serialization", serde(skip_serializing, skip_deserializing))]
-    pub(crate) map_to_data_index_in_palette: HashMap<T, usize>,
+        match occupancy {
+            0 => {
+                *self = Contree::Leaf(AIR);
+            },
+            u64::MAX => {
+                if let Some(homogeneous_material) = homogeneous_material {
+                    debug_assert!(homogeneous_material != AIR);
+                    *self = Contree::Leaf(homogeneous_material);
+                }
+            },
+            _ => {}
+        }
+    }
 
-    /// Feature flag to enable/disable simplification attempts during contree update operations
-    pub auto_simplify: bool,
+    #[inline]
+    fn set_voxel(&mut self, voxel: VoxelData, i: usize) {
+        self.subdivide();
+        match self {
+            Contree::Node(node) => {
+                node.children[i] = Some(Contree::Leaf(voxel));
+            },
+            Contree::Leaf(_) => unreachable!(),
+        };
+        self.recalculate_occupancy_bits();
+    }
+
+    fn set_voxels(&mut self, voxels: [VoxelData; 64]) {
+        *self = Contree::Node(ContreeNode{
+            mip: Albedo { r: 0, g: 0, b: 0, a: 0 },
+            occupancy: u64::MAX,
+            children: Box::new(voxels.map(|voxel| Some(Contree::Leaf(voxel)))),
+        });
+        self.recalculate_occupancy_bits();
+    }
 }

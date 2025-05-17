@@ -1,35 +1,28 @@
-mod cache;
-mod data;
 mod pipeline;
 pub mod types;
 
 pub use crate::raytracing::bevy::types::{
-    ContreeGPUHost, BoxTreeGPUView, BoxTreeSpyGlass, RenderBevyPlugin, VhxViewSet, Viewport,
+    BoxTreeSpyGlass, Viewport,
 };
 use crate::{
-    contree::{Albedo, V3cf32, VoxelData},
-    raytracing::bevy::{
-        data::{handle_gpu_readback, sync_with_main_world, write_to_gpu},
+    contree::{contree_gpu_serialization::BakedContree, types::Albedo}, raytracing::bevy::{
         pipeline::prepare_bind_groups,
-        types::{VhxLabel, VhxRenderNode, VhxRenderPipeline},
-    },
+        types::{RaymarchingLabel, RaymarchingRenderNode, RaymarchingRenderPipeline},
+    }, spatial::math::vector::V3cf32
 };
 use bendy::{decoding::FromBencode, encoding::ToBencode};
 use bevy::{
     app::{App, Plugin},
-    asset::LoadState,
     prelude::{
-        AssetServer, Assets, ExtractSchedule, Handle, Image, IntoSystemConfigs, Res, ResMut,
+        Assets, Handle, Image, IntoSystemConfigs, ResMut,
         Update, Vec4,
     },
     render::{
-        extract_resource::ExtractResourcePlugin,
-        render_asset::RenderAssetUsages,
-        render_graph::RenderGraph,
-        render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
-        Render, RenderApp, RenderSet,
+        extract_component::ExtractComponentPlugin, render_asset::RenderAssetUsages, render_graph::RenderGraph, render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages}, Render, RenderApp, RenderSet
     },
 };
+use pipeline::write_to_gpu;
+use types::RaymarchingViewSet;
 use std::hash::Hash;
 
 impl From<Vec4> for Albedo {
@@ -50,42 +43,6 @@ impl From<Albedo> for Vec4 {
             color.b as f32 / 255.,
             color.a as f32 / 255.,
         )
-    }
-}
-
-impl BoxTreeGPUView {
-    /// Erases the whole view to be uploaded to the GPU again
-    pub fn reload(&mut self) {
-        self.reload = true;
-    }
-
-    /// Provides the handle to the output texture
-    /// Warning! Handle will no longer being updated after resolution change
-    pub fn output_texture(&self) -> &Handle<Image> {
-        &self.spyglass.output_texture
-    }
-
-    /// Updates the resolution on which the view operates on.
-    /// It will make a new output texture if size is larger, than the current output texture
-    pub fn set_resolution(
-        &mut self,
-        resolution: [u32; 2],
-        images: &mut ResMut<Assets<Image>>,
-    ) -> Handle<Image> {
-        if self.resolution != resolution {
-            self.new_resolution = Some(resolution);
-            self.new_output_texture = Some(create_output_texture(resolution, images));
-            self.new_depth_texture = Some(create_depth_texture(resolution, images));
-            self.rebuild = true;
-            self.new_output_texture.as_ref().unwrap().clone_weak()
-        } else {
-            self.spyglass.output_texture.clone_weak()
-        }
-    }
-
-    /// Provides currently used resolution for the view
-    pub fn resolution(&self) -> [u32; 2] {
-        self.resolution
     }
 }
 
@@ -112,26 +69,6 @@ impl Viewport {
             direction,
             frustum,
             fov,
-        }
-    }
-}
-
-impl<T> Default for RenderBevyPlugin<T>
-where
-    T: Default + Clone + Eq + VoxelData + Send + Sync + 'static,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T> RenderBevyPlugin<T>
-where
-    T: Default + Clone + Eq + VoxelData + Send + Sync + 'static,
-{
-    pub fn new() -> Self {
-        RenderBevyPlugin {
-            dummy: std::marker::PhantomData,
         }
     }
 }
@@ -181,97 +118,41 @@ pub(crate) fn create_depth_texture(
 }
 
 pub(crate) fn handle_resolution_updates(
-    viewset: Option<ResMut<VhxViewSet>>,
-    images: ResMut<Assets<Image>>,
-    server: Res<AssetServer>,
+    //images: ResMut<Assets<Image>>,
+    //server: Res<AssetServer>,
 ) {
-    if let Some(viewset) = viewset {
-        let mut current_view = viewset.views[0].lock().unwrap();
-        if current_view.new_resolution.is_some() {
-            // see if a new output texture is loaded for the requested resolution yet
-            let new_out_tex = current_view
-                .new_output_texture
-                .as_ref()
-                .unwrap()
-                .clone_weak();
-            if images.get(&new_out_tex).is_some()
-                || matches!(server.get_load_state(&new_out_tex), Some(LoadState::Loaded))
-            {
-                current_view.resolution = current_view.new_resolution.take().unwrap();
-                current_view.spyglass.output_texture =
-                    current_view.new_output_texture.clone().unwrap();
-            }
-        }
-
-        if current_view.new_depth_texture.is_some() {
-            let new_depth_tex = current_view
-                .new_depth_texture
-                .as_ref()
-                .unwrap()
-                .clone_weak();
-            if images.get(&new_depth_tex).is_some()
-                || matches!(
-                    server.get_load_state(&new_depth_tex),
-                    Some(LoadState::Loaded)
-                )
-            {
-                current_view.spyglass.depth_texture =
-                    current_view.new_depth_texture.clone().unwrap();
-            }
-        }
-    }
+    // todo
 }
 
-impl<
-        #[cfg(all(feature = "bytecode", feature = "serialization"))] T: FromBencode
-            + ToBencode
-            + Serialize
-            + DeserializeOwned
-            + Default
-            + Eq
-            + Clone
-            + Hash
-            + VoxelData
-            + Send
-            + Sync
-            + 'static,
-        #[cfg(all(feature = "bytecode", not(feature = "serialization")))] T: FromBencode + ToBencode + Default + Eq + Clone + Hash + VoxelData + Send + Sync + 'static,
-        #[cfg(all(not(feature = "bytecode"), feature = "serialization"))] T: Serialize
-            + DeserializeOwned
-            + Default
-            + Eq
-            + Clone
-            + Hash
-            + VoxelData
-            + Send
-            + Sync
-            + 'static,
-        #[cfg(all(not(feature = "bytecode"), not(feature = "serialization")))] T: Default + Eq + Clone + Hash + VoxelData + Send + Sync + 'static,
-    > Plugin for RenderBevyPlugin<T>
+#[derive(Default)]
+pub struct RenderBevyPlugin;
+
+impl Plugin for RenderBevyPlugin
 {
     fn build(&self, app: &mut App) {
         app.add_plugins((
-            ExtractResourcePlugin::<ContreeGPUHost<T>>::default(),
-            ExtractResourcePlugin::<VhxViewSet>::default(),
+            ExtractComponentPlugin::<BakedContree>::default(),
         ));
         app.add_systems(Update, handle_resolution_updates);
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(ExtractSchedule, sync_with_main_world);
+        render_app.insert_resource(RaymarchingViewSet {
+            resources: None
+        });
         render_app.add_systems(
             Render,
             (
-                write_to_gpu::<T>.in_set(RenderSet::PrepareResources),
+                write_to_gpu.in_set(RenderSet::PrepareResources),
                 prepare_bind_groups.in_set(RenderSet::PrepareBindGroups),
-                handle_gpu_readback.in_set(RenderSet::Cleanup),
+                //handle_gpu_readback.in_set(RenderSet::Cleanup),
             ),
         );
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(VhxLabel, VhxRenderNode { ready: false });
-        render_graph.add_node_edge(VhxLabel, bevy::render::graph::CameraDriverLabel);
+        render_graph.add_node(RaymarchingLabel, RaymarchingRenderNode { ready: false });
+        render_graph.add_node_edge(RaymarchingLabel, bevy::render::graph::CameraDriverLabel);
     }
 
     fn finish(&self, app: &mut App) {
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<VhxRenderPipeline>();
+        render_app.init_resource::<RaymarchingRenderPipeline>();
     }
 }

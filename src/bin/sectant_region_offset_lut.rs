@@ -1,4 +1,4 @@
-use voxelhex::contree::V3c;
+use voxelhex::spatial::math::vector::V3c;
 
 pub(crate) const BOX_NODE_DIMENSION: usize = 4;
 pub(crate) const BOX_NODE_CHILDREN_COUNT: usize = 64;

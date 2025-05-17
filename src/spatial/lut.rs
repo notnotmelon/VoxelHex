@@ -1,4 +1,4 @@
-use crate::contree::{V3c, V3cf32};
+use super::math::vector::{V3c, V3cf32};
 
 #[rustfmt::skip]
 pub(crate) const SECTANT_OFFSET_LUT: [V3cf32; 64] = [

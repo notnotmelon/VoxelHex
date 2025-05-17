@@ -2,7 +2,4 @@
 pub mod bevy;
 
 #[cfg(feature = "bevy_wgpu")]
-pub use bevy::types::{
-    ContreeGPUHost, BoxTreeGPUView, ContreeRenderData, BoxTreeSpyGlass, RenderBevyPlugin,
-    VhxViewSet, Viewport,
-};
+pub use bevy::types::{BoxTreeSpyGlass, Viewport};
